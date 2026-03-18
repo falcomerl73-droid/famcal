@@ -350,6 +350,17 @@
 .event-chip.outlook { background: rgba(249,123,107,.2); color: var(--outlook); }
 .event-chip.local   { background: rgba(91,229,160,.2);  color: var(--success); }
 
+/* Multi-day events */
+.event-chip.multiday {
+  border-radius: 0; margin: 0 -7px; padding: 2px 7px;
+  position: relative; z-index: 2;
+}
+.event-chip.multiday.start { border-radius: 4px 0 0 4px; margin-left: 0; }
+.event-chip.multiday.end   { border-radius: 0 4px 4px 0; margin-right: 0; }
+.event-chip.multiday.solo  { border-radius: 4px; margin: 0; }
+.event-chip.multiday.cont  { opacity: .85; }
+.event-chip.placeholder    { visibility: hidden; pointer-events: none; }
+
 /* week grid */
 /* Week view — header fisso, ore scorrevoli */
 .week-wrapper {
@@ -380,7 +391,99 @@
 .week-event.outlook { background: rgba(249,123,107,.25); color: var(--outlook); border-left: 2px solid var(--outlook); }
 .week-event.local   { background: rgba(91,229,160,.25);  color: var(--success); border-left: 2px solid var(--success); }
 
-/* day view */
+/* day view wrapper */
+.day-wrapper {
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+  height: calc(100vh - 210px); min-height: 400px;
+  display: flex; flex-direction: column;
+}
+.day-body {
+  overflow-y: auto; flex: 1;
+}
+
+/* Timeline shared styles */
+.week-timeline, .day-body > div {
+  display: flex;
+}
+.week-timeline { display: flex; }
+.wtl-hours {
+  flex-shrink: 0; width: 52px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+.wtl-hour-lbl {
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 3px; font-size: .6rem; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+.wtl-day-col {
+  flex: 1; position: relative;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  min-width: 0;
+}
+.wtl-day-col:last-child { border-right: none; }
+.wtl-hour-line {
+  position: absolute; left: 0; right: 0; height: 56px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; z-index: 1;
+}
+.wtl-hour-line:hover { background: rgba(124,106,247,.05); }
+
+/* Timeline events */
+.wtl-event {
+  position: absolute; left: 2px; right: 2px;
+  border-radius: 5px; padding: 3px 5px;
+  font-size: .65rem; overflow: hidden;
+  cursor: pointer; z-index: 2;
+  display: flex; flex-direction: column; gap: 1px;
+  border-left: 3px solid;
+  transition: filter .15s;
+}
+.wtl-event:hover { filter: brightness(1.2); }
+.wtl-event.google  { background: rgba(79,195,247,.2);  color: var(--google);  border-color: var(--google); }
+.wtl-event.outlook { background: rgba(249,123,107,.2); color: var(--outlook); border-color: var(--outlook); }
+.wtl-event.local   { background: rgba(91,229,160,.2);  color: var(--success); border-color: var(--success); }
+.wtl-ev-time  { font-size: .58rem; opacity: .8; white-space: nowrap; }
+.wtl-ev-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wtl-ev-notes { font-size: .58rem; opacity: .7; overflow: hidden; }
+.day-ev { left: 4px; right: 4px; }
+.day-ev .wtl-ev-title { font-size: .8rem; white-space: normal; }
+.day-ev .wtl-ev-time  { font-size: .7rem; }
+
+/* All-day banner week view */
+.week-allday-row {
+  display: grid; grid-template-columns: 52px repeat(7,1fr);
+  gap: 1px; background: var(--border); flex-shrink: 0;
+  border-bottom: 2px solid var(--border);
+}
+.week-allday-cell {
+  background: var(--surface2); padding: 2px 1px;
+  display: flex; flex-direction: column; gap: 2px; min-height: 24px;
+}
+
+/* All-day banner day view */
+.day-allday-banner {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Current time indicator */
+.now-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: var(--rust, #c4622d); z-index: 5;
+  pointer-events: none;
+}
+.now-line::before {
+  content: ''; position: absolute; left: -4px; top: -4px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--rust, #c4622d);
+}
 .day-view { display: grid; grid-template-columns: 52px 1fr; gap: 1px; background: var(--border); border-radius: 10px; overflow: hidden; }
 .day-slot { background: var(--surface); height: 52px; border-top: 1px solid var(--border); position: relative; cursor: pointer; }
 .day-slot:hover { background: var(--surface2); }
@@ -483,10 +586,15 @@
 
   /* Week/Day view mobile */
   .week-wrapper { height: calc(100vh - 180px); }
-  .week-header-row, .week-body-grid { grid-template-columns: 36px repeat(7,minmax(60px,1fr)); }
+  .day-wrapper  { height: calc(100vh - 180px); }
+  .week-header-row { grid-template-columns: 36px repeat(7,minmax(52px,1fr)); }
+  .wtl-hours { width: 36px; }
+  .week-timeline { min-width: calc(36px + 7 * 52px); }
   .week-body { overflow-x: auto; overflow-y: auto; }
   .week-day-hdr .wdd { font-size: 1rem; }
   .week-day-hdr .wdn { font-size: .55rem; }
+  .wtl-event { font-size: .58rem; padding: 2px 3px; }
+  .wtl-ev-time { font-size: .52rem; }
   .day-view  { grid-template-columns: 36px 1fr; }
 
   /* Modal mobile */
@@ -756,8 +864,12 @@
       <input type="text" id="ev-title" placeholder="Nome evento">
     </div>
     <div class="form-row">
-      <label>Data</label>
+      <label>Data inizio</label>
       <input type="date" id="ev-date">
+    </div>
+    <div class="form-row">
+      <label>Data fine <span style="color:var(--muted);font-weight:400;text-transform:none">(solo per eventi multi-giorno)</span></label>
+      <input type="date" id="ev-end-date">
     </div>
     <div style="display:flex;gap:10px">
       <div class="form-row" style="flex:1"><label>Ora inizio</label><input type="time" id="ev-start"></div>
@@ -1217,22 +1329,91 @@ function renderMonth() {
   const y = currentDate.getFullYear(), m = currentDate.getMonth();
   document.getElementById('period-title').textContent = `${MONTHS_IT[m]} ${y}`;
   const start = new Date(y, m, 1);
-  // Inizia dal lunedì (0=dom, 1=lun ... 6=sab)
   const firstDay = start.getDay() === 0 ? 6 : start.getDay() - 1;
   start.setDate(start.getDate() - firstDay);
-  let html = '<div class="month-grid" id="month-grid">';
-  DAYS_IT.forEach(d => html += `<div class="day-header">${d}</div>`);
+
+  // Costruisci griglia di 42 giorni
+  const grid = [];
   for (let i = 0; i < 42; i++) {
     const d = new Date(start); d.setDate(start.getDate()+i);
-    const ds = fmt(d), isToday = ds===today(), other = d.getMonth()!==m;
-    const dayEvs = getEventsForDay(ds);
+    grid.push(fmt(d));
+  }
+
+  // Separa eventi multi-giorno da eventi singolo giorno
+  const allEvents = events.filter(e => {
+    if (activeMemberFilter) return !e.authorId || e.authorId === activeMemberFilter;
+    return true;
+  });
+
+  const multiDayEvs = allEvents.filter(ev => ev.date && ev.endDate && ev.endDate > ev.date);
+  const singleDayEvs = allEvents.filter(ev => !ev.endDate || ev.endDate <= ev.date);
+
+  // Per ogni cella calcola gli slot occupati dagli eventi multi-giorno
+  // slot[dateStr] = array di {ev, pos, isStart, isEnd}
+  const slots = {};
+  grid.forEach(ds => slots[ds] = []);
+
+  // Assegna posizione (riga) a ciascun evento multi-giorno
+  const assigned = [];
+  multiDayEvs.sort((a,b) => a.date.localeCompare(b.date)).forEach(ev => {
+    const startD = ev.date, endD = ev.endDate;
+    // Trova prima riga libera che non sia occupata per tutto il range
+    let row = 0;
+    while (true) {
+      const conflict = assigned.find(a => a.row===row && a.ev.date<=endD && a.ev.endDate>=startD);
+      if (!conflict) break;
+      row++;
+    }
+    assigned.push({ ev, row });
+    // Marca ogni giorno dell'evento
+    grid.forEach(ds => {
+      if (ds >= startD && ds <= endD) {
+        while (slots[ds].length <= row) slots[ds].push(null);
+        slots[ds][row] = { ev, isStart: ds===startD, isEnd: ds===endD };
+      }
+    });
+  });
+
+  // Costruisci HTML
+  let html = '<div class="month-grid" id="month-grid">';
+  DAYS_IT.forEach(d => html += `<div class="day-header">${d}</div>`);
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const ds = grid[i], isToday = ds===today(), other = d.getMonth()!==m;
     html += `<div class="day-cell${other?' other-month':''}${isToday?' today':''}" onclick="openNewEventOnDate('${ds}')">`;
     html += `<div class="day-num">${d.getDate()}</div>`;
-    dayEvs.slice(0,3).forEach(ev => {
-      const av = ev.authorAvatar ? `<span style="margin-right:2px">${ev.authorAvatar}</span>` : '';
-      html += `<div class="event-chip ${ev.calendar||'local'}" onclick="event.stopPropagation();openEditEvent('${ev.id}')" title="${ev.title}">${av}${ev.start?ev.start+' ':''}${ev.title}</div>`;
+
+    // Mostra eventi multi-giorno (con slot fissi per continuità visiva)
+    const cellSlots = slots[ds] || [];
+    cellSlots.forEach(slot => {
+      if (!slot) {
+        html += `<div class="event-chip placeholder">​</div>`; // slot vuoto per allineamento
+        return;
+      }
+      const { ev, isStart, isEnd } = slot;
+      const cal = ev.calendar||'local';
+      const posClass = isStart && isEnd ? 'solo' : isStart ? 'start' : isEnd ? 'end' : 'cont';
+      const label = isStart ? `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}` : '';
+      html += `<div class="event-chip ${cal} multiday ${posClass}"
+        onclick="event.stopPropagation();openEditEvent('${ev.id}')"
+        title="${ev.title}">${label}</div>`;
     });
-    if (dayEvs.length > 3) html += `<div style="font-size:.62rem;color:var(--muted)">+${dayEvs.length-3} altri</div>`;
+
+    // Mostra eventi singolo giorno sotto
+    const dayEvs = singleDayEvs.filter(e => e.date === ds);
+    const usedSlots = cellSlots.filter(Boolean).length;
+    const remainingSlots = Math.max(0, 3 - usedSlots);
+    dayEvs.slice(0, remainingSlots).forEach(ev => {
+      const av = ev.authorAvatar ? `<span style="margin-right:2px">${ev.authorAvatar}</span>` : '';
+      html += `<div class="event-chip ${ev.calendar||'local'}"
+        onclick="event.stopPropagation();openEditEvent('${ev.id}')"
+        title="${ev.title}">${av}${ev.start?ev.start+' ':''}${ev.title}</div>`;
+    });
+
+    const extra = (dayEvs.length - remainingSlots) + Math.max(0, multiDayEvs.filter(ev => ds >= ev.date && ds <= ev.endDate).length - cellSlots.filter(Boolean).length);
+    if (extra > 0) html += `<div style="font-size:.62rem;color:var(--muted)">+${extra} altri</div>`;
+
     html += '</div>';
   }
   html += '</div>';
@@ -1270,9 +1451,14 @@ function renderWeek() {
   document.getElementById('period-title').textContent =
     `${d0.getDate()} ${MONTHS_IT[d0.getMonth()]} – ${d6.getDate()} ${MONTHS_IT[d6.getMonth()]} ${d6.getFullYear()}`;
 
-  // Header fisso con nomi e numeri giorni
-  let header = '<div class="week-header-row">';
-  header += '<div class="week-corner"></div>';
+  const HOUR_H = 56;
+  const weekDays = Array.from({length:7}, (_,i) => { const d=new Date(d0); d.setDate(d0.getDate()+i); return fmt(d); });
+  const allEvs = events.filter(e => activeMemberFilter ? (!e.authorId||e.authorId===activeMemberFilter) : true);
+  const multiEvs = allEvs.filter(ev => ev.endDate && ev.endDate > ev.date &&
+    ev.date <= weekDays[6] && ev.endDate >= weekDays[0]);
+
+  // Header fisso
+  let header = '<div class="week-header-row"><div class="week-corner"></div>';
   for (let i=0;i<7;i++) {
     const dd = new Date(d0); dd.setDate(d0.getDate()+i);
     const it = fmt(dd)===today();
@@ -1283,31 +1469,68 @@ function renderWeek() {
   }
   header += '</div>';
 
-  // Corpo scorrevole con ore ed eventi
-  let body = '<div class="week-body"><div class="week-body-grid">';
-  for (let h=0;h<24;h++) {
-    body += `<div class="time-lbl">${String(h).padStart(2,'0')}:00</div>`;
+  // Banner multi-giorno
+  let banner = '';
+  if (multiEvs.length > 0) {
+    banner = '<div class="week-allday-row"><div class="week-corner" style="font-size:.55rem;color:var(--muted);display:flex;align-items:center;justify-content:center;padding:2px">tutto il giorno</div>';
     for (let i=0;i<7;i++) {
-      const dd = new Date(d0); dd.setDate(d0.getDate()+i); const ds=fmt(dd);
-      const sEvs = getEventsForDay(ds).filter(ev=>ev.start&&parseInt(ev.start)===h);
-      body += `<div class="week-cell" onclick="openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')">`;
-      sEvs.forEach(ev => body += `<div class="week-event ${ev.calendar||'local'}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</div>`);
-      body += '</div>';
+      const ds = weekDays[i];
+      const dayMulti = multiEvs.filter(ev => ds >= ev.date && ds <= ev.endDate);
+      banner += '<div class="week-allday-cell">';
+      dayMulti.forEach(ev => {
+        const cal = ev.calendar||'local';
+        const isStart = ds===ev.date || ds===weekDays[0];
+        const isEnd   = ds===ev.endDate || ds===weekDays[6];
+        const posClass = isStart && isEnd ? 'solo' : isStart ? 'start' : isEnd ? 'end' : 'cont';
+        const label = isStart ? `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}` : '';
+        banner += `<div class="event-chip ${cal} multiday ${posClass}" onclick="event.stopPropagation();openEditEvent('${ev.id}')" title="${ev.title}">${label}</div>`;
+      });
+      banner += '</div>';
     }
+    banner += '</div>';
+  }
+
+  // Corpo scorrevole
+  let body = '<div class="week-body"><div class="week-timeline">';
+  body += '<div class="wtl-hours">';
+  for (let h=0;h<24;h++) body += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
+  body += '</div>';
+
+  for (let i=0;i<7;i++) {
+    const ds = weekDays[i];
+    const dayEvs = getEventsForDay(ds).filter(ev => ev.start && (!ev.endDate || ev.endDate <= ev.date));
+    body += `<div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
+    for (let h=0;h<24;h++) body += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
+    dayEvs.forEach(ev => {
+      const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
+      const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
+      const startMin = sh*60+sm, endMin = Math.max(eh*60+em, startMin+30);
+      const top = (startMin/60)*HOUR_H, height = Math.max(((endMin-startMin)/60)*HOUR_H, 22);
+      const cal = ev.calendar||'local';
+      body += `<div class="wtl-event ${cal}" style="top:${top}px;height:${height}px" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+        <span class="wtl-ev-time">${ev.start}${ev.end?'–'+ev.end:''}</span>
+        <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</span>
+      </div>`;
+    });
+    body += '</div>';
   }
   body += '</div></div>';
 
-  document.getElementById('cal-main').innerHTML = `<div class="week-wrapper">${header}${body}</div>`;
+  document.getElementById('cal-main').innerHTML = `<div class="week-wrapper">${header}${banner}${body}</div>`;
 
-  // Scorri automaticamente all'ora corrente
-  const now = new Date();
   const weekBody = document.querySelector('.week-body');
   if (weekBody) {
-    const currentHour = now.getHours();
-    const scrollTo = Math.max(0, (currentHour - 1) * 53);
-    weekBody.scrollTop = scrollTo;
+    weekBody.scrollTop = Math.max(0, (new Date().getHours()-1)*HOUR_H);
+    const todayIdx = weekDays.indexOf(today());
+    if (todayIdx >= 0) {
+      const now = new Date();
+      const topPx = ((now.getHours()*60+now.getMinutes())/60)*HOUR_H;
+      setTimeout(() => {
+        const cols = document.querySelectorAll('.wtl-day-col');
+        if (cols[todayIdx]) { const l=document.createElement('div'); l.className='now-line'; l.style.top=topPx+'px'; cols[todayIdx].appendChild(l); }
+      }, 50);
+    }
   }
-
   initSwipe();
 }
 
@@ -1315,21 +1538,114 @@ function renderDay() {
   const ds = fmt(currentDate);
   document.getElementById('period-title').textContent =
     `${DAYS_IT[currentDate.getDay()===0?6:currentDate.getDay()-1]}, ${currentDate.getDate()} ${MONTHS_IT[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-  let html = '<div class="day-view">';
-  for (let h=0;h<24;h++) {
-    html += `<div class="time-lbl">${String(h).padStart(2,'0')}:00</div>`;
-    const sEvs = getEventsForDay(ds).filter(ev=>ev.start&&parseInt(ev.start)===h);
-    html += `<div class="day-slot" onclick="openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')">`;
-    sEvs.forEach(ev => {
-      html += `<div class="day-event ${ev.calendar||'local'}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
-        <strong>${ev.start}${ev.end?' – '+ev.end:''}</strong> ${ev.title}
-        ${ev.notes?`<br><span style="opacity:.7;font-size:.7rem">${ev.notes}</span>`:''}
+
+  const HOUR_H = 64;
+  const allEvs = events.filter(e => activeMemberFilter ? (!e.authorId||e.authorId===activeMemberFilter) : true);
+  const multiEvs = allEvs.filter(ev => ev.endDate && ev.endDate > ev.date && ds >= ev.date && ds <= ev.endDate);
+  const timedEvs = allEvs.filter(ev => ev.date===ds && ev.start && (!ev.endDate||ev.endDate<=ev.date));
+
+  // Banner multi-giorno
+  let banner = '';
+  if (multiEvs.length > 0) {
+    banner = '<div class="day-allday-banner">';
+    multiEvs.forEach(ev => {
+      const cal = ev.calendar||'local';
+      banner += `<div class="event-chip ${cal} multiday solo" onclick="openEditEvent('${ev.id}')" title="${ev.title}">
+        ${ev.authorAvatar?ev.authorAvatar+' ':''}📅 ${ev.title}
+        <span style="opacity:.7;font-size:.9em"> · ${ev.date} → ${ev.endDate}</span>
       </div>`;
     });
-    html += '</div>';
+    banner += '</div>';
   }
-  html += '</div>';
+
+  let html = `<div class="day-wrapper">${banner}<div class="day-body"><div class="wtl-hours">`;
+  for (let h=0;h<24;h++) html += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
+  html += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
+  for (let h=0;h<24;h++) html += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
+  timedEvs.forEach(ev => {
+    const [sh,sm]=(ev.start||'00:00').split(':').map(Number);
+    const [eh,em]=(ev.end||`${sh+1}:00`).split(':').map(Number);
+    const startMin=sh*60+sm, endMin=Math.max(eh*60+em,startMin+30);
+    const top=(startMin/60)*HOUR_H, height=Math.max(((endMin-startMin)/60)*HOUR_H,28);
+    const cal=ev.calendar||'local';
+    html += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+      <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
+      <span class="wtl-ev-title">${ev.title}</span>
+      ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
+    </div>`;
+  });
+  html += '</div></div></div>';
   document.getElementById('cal-main').innerHTML = html;
+
+  const dayBody = document.querySelector('.day-body');
+  if (dayBody) {
+    const now = new Date();
+    dayBody.scrollTop = Math.max(0, (now.getHours()-1)*HOUR_H);
+    const topPx = ((now.getHours()*60+now.getMinutes())/60)*HOUR_H;
+    setTimeout(() => {
+      const col = document.querySelector('.day-body .wtl-day-col');
+      if (col) { const l=document.createElement('div'); l.className='now-line'; l.style.top=topPx+'px'; col.appendChild(l); }
+    }, 50);
+  }
+  initSwipe();
+}
+
+function renderDay() {
+  const ds = fmt(currentDate);
+  document.getElementById('period-title').textContent =
+    `${DAYS_IT[currentDate.getDay()===0?6:currentDate.getDay()-1]}, ${currentDate.getDate()} ${MONTHS_IT[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+  const HOUR_H = 64;
+  const dayEvs = getEventsForDay(ds).filter(ev => ev.start);
+
+  let html = `<div class="day-wrapper">
+    <div class="day-body">
+      <div class="wtl-hours">`;
+  for (let h=0;h<24;h++) {
+    html += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
+  }
+  html += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
+
+  for (let h=0;h<24;h++) {
+    html += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
+  }
+
+  dayEvs.forEach(ev => {
+    const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
+    const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
+    const startMin = sh*60+sm;
+    const endMin   = Math.max(eh*60+em, startMin+30);
+    const top    = (startMin / 60) * HOUR_H;
+    const height = Math.max(((endMin - startMin) / 60) * HOUR_H, 28);
+    const cal    = ev.calendar||'local';
+    html += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px"
+      onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+      <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
+      <span class="wtl-ev-title">${ev.title}</span>
+      ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
+    </div>`;
+  });
+
+  html += '</div></div></div>';
+  document.getElementById('cal-main').innerHTML = html;
+
+  // Scorri all'ora corrente + linea ora
+  const dayBody = document.querySelector('.day-body');
+  if (dayBody) {
+    const now = new Date();
+    const currentHour = now.getHours();
+    dayBody.scrollTop = Math.max(0, (currentHour - 1) * HOUR_H);
+    const topPx = ((now.getHours()*60 + now.getMinutes()) / 60) * HOUR_H;
+    setTimeout(() => {
+      const col = document.querySelector('.day-body .wtl-day-col');
+      if (col) {
+        const line = document.createElement('div');
+        line.className = 'now-line';
+        line.style.top = topPx + 'px';
+        col.appendChild(line);
+      }
+    }, 50);
+  }
   initSwipe();
 }
 
@@ -1341,6 +1657,7 @@ function openNewEvent() {
   document.getElementById('event-id').value = '';
   document.getElementById('ev-title').value = '';
   document.getElementById('ev-date').value  = today();
+  document.getElementById('ev-end-date').value = '';
   document.getElementById('ev-start').value = '09:00';
   document.getElementById('ev-end').value   = '10:00';
   document.getElementById('ev-calendar').value = 'local';
@@ -1362,6 +1679,7 @@ function openEditEvent(id) {
   document.getElementById('event-id').value = id;
   document.getElementById('ev-title').value = ev.title;
   document.getElementById('ev-date').value  = ev.date;
+  document.getElementById('ev-end-date').value = ev.endDate||'';
   document.getElementById('ev-start').value = ev.start||'';
   document.getElementById('ev-end').value   = ev.end||'';
   document.getElementById('ev-calendar').value = ev.calendar||'local';
@@ -1411,6 +1729,7 @@ function saveEvent() {
     id: id || 'local_'+Date.now(),
     title: document.getElementById('ev-title').value || 'Senza titolo',
     date:  document.getElementById('ev-date').value,
+    endDate: document.getElementById('ev-end-date').value || null,
     start: document.getElementById('ev-start').value,
     end:   document.getElementById('ev-end').value,
     calendar: cal, notes: document.getElementById('ev-notes').value,
@@ -1545,10 +1864,22 @@ async function fetchGoogleEvents() {
 function importGoogleEvents(items) {
   items.forEach(item => {
     if (events.find(e => e.remoteId===item.id)) return;
+    const startStr = item.start?.dateTime || item.start?.date || '';
+    const endStr   = item.end?.dateTime   || item.end?.date   || '';
+    const isAllDay = !item.start?.dateTime;
+    const dateStr  = startStr.substring(0,10);
+    // Per eventi tutto-il-giorno, la data fine Google è esclusiva (giorno dopo) → sottrai 1
+    let endDate = null;
+    if (isAllDay && endStr) {
+      const ed = new Date(endStr);
+      ed.setDate(ed.getDate()-1);
+      const edStr = fmt(ed);
+      if (edStr > dateStr) endDate = edStr;
+    }
     const ev = { id:'g_'+item.id, remoteId:item.id, title:item.summary||'(senza titolo)',
-      date:(item.start?.dateTime||item.start?.date||'').substring(0,10),
-      start:item.start?.dateTime ? item.start.dateTime.substring(11,16) : '',
-      end:item.end?.dateTime     ? item.end.dateTime.substring(11,16)   : '',
+      date: dateStr, endDate,
+      start: item.start?.dateTime ? item.start.dateTime.substring(11,16) : '',
+      end:   item.end?.dateTime   ? item.end.dateTime.substring(11,16)   : '',
       calendar:'google', notes:item.description||'',
       authorId: currentUser?.id, authorName: currentUser?.name, authorAvatar: currentUser?.avatar,
     };
