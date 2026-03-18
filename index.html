@@ -351,13 +351,29 @@
 .event-chip.local   { background: rgba(91,229,160,.2);  color: var(--success); }
 
 /* week grid */
-.week-grid { display: grid; grid-template-columns: 52px repeat(7,1fr); gap: 1px; background: var(--border); border-radius: 10px; overflow: hidden; }
+/* Week view — header fisso, ore scorrevoli */
+.week-wrapper {
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  height: calc(100vh - 210px); min-height: 400px;
+}
+.week-header-row {
+  display: grid; grid-template-columns: 52px repeat(7,1fr);
+  gap: 1px; background: var(--border); flex-shrink: 0;
+}
+.week-corner { background: var(--surface); }
+.week-body { overflow-y: auto; flex: 1; background: var(--border); }
+.week-body-grid {
+  display: grid; grid-template-columns: 52px repeat(7,1fr);
+  gap: 1px; background: var(--border);
+}
 .week-day-hdr { background: var(--surface); padding: 9px 5px; text-align: center; font-size: .72rem; font-weight: 600; }
 .week-day-hdr .wdn { color: var(--muted); font-size: .62rem; text-transform: uppercase; letter-spacing: .07em; }
 .week-day-hdr .wdd { font-family: 'DM Serif Display', serif; font-size: 1.25rem; }
 .week-day-hdr.today .wdd { color: var(--accent); }
 .time-lbl { background: var(--surface); display: flex; align-items: flex-start; justify-content: center; padding-top: 3px; font-size: .62rem; color: var(--muted); }
-.week-cell { background: var(--surface); height: 48px; border-top: 1px solid var(--border); position: relative; cursor: pointer; }
+.week-cell { background: var(--surface); height: 52px; border-top: 1px solid var(--border); position: relative; cursor: pointer; }
 .week-cell:hover { background: var(--surface2); }
 .week-event { position: absolute; left: 2px; right: 2px; font-size: .63rem; font-weight: 500; padding: 2px 4px; border-radius: 3px; overflow: hidden; z-index: 2; cursor: pointer; white-space: nowrap; text-overflow: ellipsis; }
 .week-event.google  { background: rgba(79,195,247,.25);  color: var(--google);  border-left: 2px solid var(--google); }
@@ -466,7 +482,11 @@
   }
 
   /* Week/Day view mobile */
-  .week-grid { grid-template-columns: 36px repeat(7,minmax(70px,1fr)); overflow-x: auto; }
+  .week-wrapper { height: calc(100vh - 180px); }
+  .week-header-row, .week-body-grid { grid-template-columns: 36px repeat(7,minmax(60px,1fr)); }
+  .week-body { overflow-x: auto; overflow-y: auto; }
+  .week-day-hdr .wdd { font-size: 1rem; }
+  .week-day-hdr .wdn { font-size: .55rem; }
   .day-view  { grid-template-columns: 36px 1fr; }
 
   /* Modal mobile */
@@ -760,6 +780,7 @@
       <button class="btn" onclick="closeEvent()">Annulla</button>
       <button class="btn primary" onclick="saveEvent()">Salva</button>
     </div>
+    <div id="ev-author-info" style="display:none;font-size:.72rem;color:var(--muted);margin-top:10px;text-align:center"></div>
   </div>
 </div>
 
@@ -1248,24 +1269,45 @@ function renderWeek() {
   const d6 = new Date(d0); d6.setDate(d0.getDate()+6);
   document.getElementById('period-title').textContent =
     `${d0.getDate()} ${MONTHS_IT[d0.getMonth()]} – ${d6.getDate()} ${MONTHS_IT[d6.getMonth()]} ${d6.getFullYear()}`;
-  let html = '<div class="week-grid"><div class="time-lbl" style="background:var(--surface)"></div>';
+
+  // Header fisso con nomi e numeri giorni
+  let header = '<div class="week-header-row">';
+  header += '<div class="week-corner"></div>';
   for (let i=0;i<7;i++) {
     const dd = new Date(d0); dd.setDate(d0.getDate()+i);
     const it = fmt(dd)===today();
-    html += `<div class="week-day-hdr${it?' today':''}"><div class="wdn">${DAYS_IT[dd.getDay()===0?6:dd.getDay()-1]}</div><div class="wdd">${dd.getDate()}</div></div>`;
+    header += `<div class="week-day-hdr${it?' today':''}">
+      <div class="wdn">${DAYS_IT[dd.getDay()===0?6:dd.getDay()-1]}</div>
+      <div class="wdd">${dd.getDate()}</div>
+    </div>`;
   }
+  header += '</div>';
+
+  // Corpo scorrevole con ore ed eventi
+  let body = '<div class="week-body"><div class="week-body-grid">';
   for (let h=0;h<24;h++) {
-    html += `<div class="time-lbl">${String(h).padStart(2,'0')}:00</div>`;
+    body += `<div class="time-lbl">${String(h).padStart(2,'0')}:00</div>`;
     for (let i=0;i<7;i++) {
       const dd = new Date(d0); dd.setDate(d0.getDate()+i); const ds=fmt(dd);
       const sEvs = getEventsForDay(ds).filter(ev=>ev.start&&parseInt(ev.start)===h);
-      html += `<div class="week-cell" onclick="openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')">`;
-      sEvs.forEach(ev => html += `<div class="week-event ${ev.calendar||'local'}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">${ev.title}</div>`);
-      html += '</div>';
+      body += `<div class="week-cell" onclick="openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')">`;
+      sEvs.forEach(ev => body += `<div class="week-event ${ev.calendar||'local'}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</div>`);
+      body += '</div>';
     }
   }
-  html += '</div>';
-  document.getElementById('cal-main').innerHTML = html;
+  body += '</div></div>';
+
+  document.getElementById('cal-main').innerHTML = `<div class="week-wrapper">${header}${body}</div>`;
+
+  // Scorri automaticamente all'ora corrente
+  const now = new Date();
+  const weekBody = document.querySelector('.week-body');
+  if (weekBody) {
+    const currentHour = now.getHours();
+    const scrollTo = Math.max(0, (currentHour - 1) * 53);
+    weekBody.scrollTop = scrollTo;
+  }
+
   initSwipe();
 }
 
@@ -1313,7 +1355,10 @@ function openNewEventOnDate(ds, st='') {
 }
 function openEditEvent(id) {
   const ev = events.find(e => e.id===id); if (!ev) return;
-  document.getElementById('event-modal-title').textContent = 'Modifica Evento';
+  const isOwner = !ev.authorId || ev.authorId === currentUser?.id;
+  const isReadOnly = !isOwner;
+
+  document.getElementById('event-modal-title').textContent = isReadOnly ? '👁️ Evento (sola lettura)' : 'Modifica Evento';
   document.getElementById('event-id').value = id;
   document.getElementById('ev-title').value = ev.title;
   document.getElementById('ev-date').value  = ev.date;
@@ -1321,14 +1366,45 @@ function openEditEvent(id) {
   document.getElementById('ev-end').value   = ev.end||'';
   document.getElementById('ev-calendar').value = ev.calendar||'local';
   document.getElementById('ev-notes').value = ev.notes||'';
-  document.getElementById('btn-delete-event').style.display = 'block';
+
+  // Disabilita campi se non è il proprietario
+  ['ev-title','ev-date','ev-start','ev-end','ev-notes'].forEach(f => {
+    document.getElementById(f).disabled = isReadOnly;
+    document.getElementById(f).style.opacity = isReadOnly ? '.5' : '1';
+  });
+
+  // Nascondi pulsanti modifica/elimina se non è il proprietario
+  document.getElementById('btn-delete-event').style.display = isReadOnly ? 'none' : 'block';
+  document.querySelector('#overlay-event .btn.primary').style.display = isReadOnly ? 'none' : 'block';
+
+  // Mostra chi ha creato l'evento
+  const authorInfo = document.getElementById('ev-author-info');
+  if (authorInfo) {
+    authorInfo.textContent = ev.authorName ? `Creato da: ${ev.authorAvatar||''} ${ev.authorName}` : '';
+    authorInfo.style.display = ev.authorName ? 'block' : 'none';
+  }
+
   document.getElementById('overlay-event').classList.add('open');
 }
-function closeEvent() { document.getElementById('overlay-event').classList.remove('open'); }
+function closeEvent() {
+  // Riabilita campi per la prossima apertura
+  ['ev-title','ev-date','ev-start','ev-end','ev-notes'].forEach(f => {
+    const el = document.getElementById(f);
+    if (el) { el.disabled = false; el.style.opacity = '1'; }
+  });
+  document.querySelector('#overlay-event .btn.primary').style.display = 'block';
+  document.getElementById('overlay-event').classList.remove('open');
+}
 
 function saveEvent() {
   const id  = document.getElementById('event-id').value;
-  // Seleziona automaticamente Google se connesso, altrimenti locale
+  // Verifica proprietà se modifica
+  if (id) {
+    const existing = events.find(e => e.id===id);
+    if (existing?.authorId && existing.authorId !== currentUser?.id) {
+      showToast('⚠️ Non puoi modificare eventi di altri familiari'); return;
+    }
+  }
   const cal = googleConnected ? 'google' : 'local';
   document.getElementById('ev-calendar').value = cal;
   const ev  = {
@@ -1344,7 +1420,7 @@ function saveEvent() {
   if (id) events = events.map(e => e.id===id ? ev : e);
   else    events.push(ev);
   saveLocal();
-  DB.saveEvent(ev); // Salva su Firebase in tempo reale
+  DB.saveEvent(ev);
   if (cal==='google' && googleConnected) {
     syncEventToGoogle(ev, !!id);
     showToast('✅ Evento salvato su Google Calendar');
@@ -1357,13 +1433,17 @@ function saveEvent() {
 function deleteEvent() {
   const id = document.getElementById('event-id').value;
   const ev = events.find(e => e.id===id);
+  // Verifica proprietà
+  if (ev?.authorId && ev.authorId !== currentUser?.id) {
+    showToast('⚠️ Non puoi eliminare eventi di altri familiari'); return;
+  }
   if (ev?.remoteId) {
     if (ev.calendar==='google'  && googleConnected)  deleteGoogleEvent(ev);
     if (ev.calendar==='outlook' && outlookConnected) deleteOutlookEvent(ev);
   }
   events = events.filter(e => e.id!==id);
   saveLocal();
-  DB.deleteEvent(id); // Elimina da Firebase
+  DB.deleteEvent(id);
   closeEvent(); render(); showToast('🗑️ Evento eliminato');
 }
 
