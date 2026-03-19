@@ -417,9 +417,9 @@
 }
 /* Griglia interna — larghezza minima fissa */
 .week-grid-inner {
-  min-width: 640px; /* 52px ore + 7 * ~84px */
+  min-width: calc(52px + 7 * 42px); /* compatto su mobile */
   display: grid;
-  grid-template-columns: 52px repeat(7, minmax(84px, 1fr));
+  grid-template-columns: 52px repeat(7, minmax(42px, 1fr));
   gap: 1px;
   background: var(--border);
 }
@@ -729,14 +729,20 @@
   /* Week/Day view mobile */
   .week-wrapper { height: calc(100vh - 180px); }
   .day-wrapper  { height: calc(100vh - 180px); }
-  .week-corner, .week-header-row .week-corner, .week-allday-row .week-corner { width: 36px; }
-  .wtl-hours { width: 36px; }
-  .week-body { overflow-x: auto; overflow-y: auto; }
-  .week-timeline { min-width: calc(36px + 7 * 52px); }
-  .week-day-hdr .wdd { font-size: 1rem; }
-  .week-day-hdr .wdn { font-size: .55rem; }
-  .wtl-event { font-size: .58rem; padding: 2px 3px; }
-  .wtl-ev-time { font-size: .52rem; }
+  /* Colonne compatte per vedere tutti 7 giorni su mobile */
+  .week-grid-inner {
+    min-width: unset !important;
+    grid-template-columns: 36px repeat(7, 1fr) !important;
+  }
+  .week-corner-hdr { min-width: 36px; }
+  .week-time-lbl { font-size: .55rem; width: 36px; }
+  .week-day-hdr { padding: 6px 2px; }
+  .week-day-hdr .wdd { font-size: .95rem; }
+  .week-day-hdr .wdn { font-size: .5rem; }
+  .week-allday-corner { font-size: .48rem; }
+  .wtl-event { font-size: .55rem; padding: 1px 2px; }
+  .wtl-ev-time { font-size: .48rem; }
+  .wtl-ev-title { font-size: .55rem; }
   .day-view  { grid-template-columns: 36px 1fr; }
 
   /* Modal mobile */
@@ -1728,7 +1734,7 @@ function renderWeek() {
   // Scorri all'ora corrente
   const scrollEl = document.querySelector('.week-scroll');
   if (scrollEl) {
-    scrollEl.scrollTop = Math.max(0, (new Date().getHours()-1)*HOUR_H);
+    scrollEl.scrollTop = 8 * HOUR_H; // Mostra dalle 08:00
     // Linea ora corrente
     const todayIdx = weekDays.indexOf(today());
     if (todayIdx >= 0) {
@@ -1808,7 +1814,7 @@ function renderDay() {
   const scrollBody = document.querySelector('.day-scroll-body');
   if (scrollBody) {
     const now = new Date();
-    scrollBody.scrollTop = Math.max(0, (now.getHours()-1)*HOUR_H);
+    scrollBody.scrollTop = 8 * HOUR_H; // Mostra dalle 08:00
     const topPx = ((now.getHours()*60+now.getMinutes())/60)*HOUR_H;
     setTimeout(() => {
       const col = document.querySelector('.day-scroll-body .wtl-day-col');
