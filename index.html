@@ -1498,7 +1498,7 @@ function renderMonth() {
       const { ev, isStart, isEnd } = slot;
       const cal = ev.calendar||'local';
       const posClass = isStart && isEnd ? 'solo' : isStart ? 'start' : isEnd ? 'end' : 'cont';
-      const label = isStart ? `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}` : '';
+      const label = `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}`;
       html += `<div class="event-chip ${cal} multiday ${posClass}"
         onclick="event.stopPropagation();openEditEvent('${ev.id}')"
         title="${ev.title}">${label}</div>`;
@@ -1633,7 +1633,7 @@ function renderWeek() {
         const isStart = ds===ev.date || ds===weekDays[0];
         const isEnd   = ds===ev.endDate || ds===weekDays[6];
         const posClass = isStart && isEnd ? 'solo' : isStart ? 'start' : isEnd ? 'end' : 'cont';
-        const label = isStart ? `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}` : '';
+        const label = `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}`;
         banner += `<div class="event-chip ${cal} multiday ${posClass}" onclick="event.stopPropagation();openEditEvent('${ev.id}')" title="${ev.title}">${label}</div>`;
       });
       banner += '</div>';
