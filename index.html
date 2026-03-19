@@ -584,10 +584,27 @@
 }
 .day-scroll-body {
   flex: 1; overflow-y: auto;
-  display: flex;
 }
-.day-scroll-body .wtl-hours { flex-shrink: 0; }
-.day-scroll-body .wtl-day-col { flex: 1; }
+.day-grid-inner {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+.day-time-lbl {
+  background: var(--surface);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 4px; font-size: .62rem; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+.day-hour-cell {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: relative; cursor: pointer;
+  box-sizing: border-box;
+}
+.day-hour-cell:hover { background: var(--surface2); }
 
 /* All-day banner week view */
 .week-allday-row {
@@ -1770,12 +1787,11 @@ function renderDay() {
   const multiEvs = allEvs.filter(ev => ev.endDate && ev.endDate > ev.date && ds >= ev.date && ds <= ev.endDate);
   const timedEvs = allEvs.filter(ev => ev.date===ds && ev.start && (!ev.endDate||ev.endDate<=ev.date));
 
-  // Header fisso con nome giorno + banner eventi multi-giorno
-  let fixedTop = '<div class="day-fixed-header">';
-  fixedTop += `<div class="day-title-row">
-    <div class="day-big-num${ds===today()?' today':''}">${dayNum}</div>
-    <div class="day-big-name">${dayName}<br><span>${monthName} ${year}</span></div>
-  </div>`;
+  let fixedTop = `<div class="day-fixed-header">
+    <div class="day-title-row">
+      <div class="day-big-num${ds===today()?' today':''}">${dayNum}</div>
+      <div class="day-big-name">${dayName}<br><span>${monthName} ${year}</span></div>
+    </div>`;
   if (multiEvs.length > 0) {
     fixedTop += '<div class="day-allday-banner">';
     multiEvs.forEach(ev => {
@@ -1789,36 +1805,42 @@ function renderDay() {
   }
   fixedTop += '</div>';
 
-  // Corpo scorrevole con ore
   const layout = computeEventLayout(timedEvs, HOUR_H);
-  let body = `<div class="day-scroll-body"><div class="wtl-hours">`;
-  for (let h=0;h<24;h++) body += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
-  body += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
-  for (let h=0;h<24;h++) body += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
-  layout.forEach(item => {
-    const { ev, top, height, col, totalCols } = item;
-    const cal = ev.calendar||'local';
-    const w = `calc(${100/totalCols}% - 4px)`;
-    const l = `calc(${(col/totalCols)*100}% + 2px)`;
-    body += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px;left:${l};width:${w}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
-      <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
-      <span class="wtl-ev-title">${ev.title}</span>
-      ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
-    </div>`;
-  });
-  body += '</div></div>';
+  let grid = '<div class="day-scroll-body"><div class="day-grid-inner">';
+  for (let h=0;h<24;h++) {
+    grid += `<div class="day-time-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
+    grid += `<div class="day-hour-cell" style="height:${HOUR_H}px" onclick="openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')">`;
+    layout.filter(item => Math.floor(item.top/HOUR_H)===h).forEach(item => {
+      const { ev, top, height, col, totalCols } = item;
+      const cal = ev.calendar||'local';
+      const w = `calc(${100/totalCols}% - 4px)`;
+      const l = `calc(${(col/totalCols)*100}% + 2px)`;
+      const topInCell = top - h*HOUR_H;
+      grid += `<div class="wtl-event ${cal} day-ev" style="top:${topInCell}px;height:${height}px;left:${l};width:${w}"
+        onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+        <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
+        <span class="wtl-ev-title">${ev.title}</span>
+        ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
+      </div>`;
+    });
+    grid += '</div>';
+  }
+  grid += '</div></div>';
 
-  document.getElementById('cal-main').innerHTML = `<div class="day-view-new">${fixedTop}${body}</div>`;
+  document.getElementById('cal-main').innerHTML = `<div class="day-view-new">${fixedTop}${grid}</div>`;
 
-  // Scorri all'ora corrente + linea ora
   const scrollBody = document.querySelector('.day-scroll-body');
   if (scrollBody) {
+    scrollBody.scrollTop = 8 * HOUR_H;
     const now = new Date();
-    scrollBody.scrollTop = 8 * HOUR_H; // Mostra dalle 08:00
-    const topPx = ((now.getHours()*60+now.getMinutes())/60)*HOUR_H;
     setTimeout(() => {
-      const col = document.querySelector('.day-scroll-body .wtl-day-col');
-      if (col) { const l=document.createElement('div'); l.className='now-line'; l.style.top=topPx+'px'; col.appendChild(l); }
+      const cells = document.querySelectorAll('.day-hour-cell');
+      if (cells[now.getHours()]) {
+        const l = document.createElement('div');
+        l.className = 'now-line';
+        l.style.top = (now.getMinutes()/60*HOUR_H) + 'px';
+        cells[now.getHours()].appendChild(l);
+      }
     }, 50);
   }
   initSwipe();
