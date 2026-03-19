@@ -1389,6 +1389,14 @@ function enterCalendar() {
   });
   applyTheme();
   render();
+  // Aggiorna Google Calendar ogni 15 minuti
+  setInterval(() => {
+    if (googleConnected && googleToken) {
+      fetchGoogleEvents();
+    } else if (localStorage.getItem('calsync_google_api_key')) {
+      fetchGoogleEventsWithKey(localStorage.getItem('calsync_google_api_key'));
+    }
+  }, 15 * 60 * 1000);
 }
 
 function autoConnectGoogle() {
@@ -1726,16 +1734,23 @@ function renderWeek() {
     grid += `<div class="week-time-lbl">${String(h).padStart(2,'0')}:00</div>`;
     for (let i=0;i<7;i++) {
       const ds = weekDays[i];
-      const sEvs = getEventsForDay(ds).filter(ev => ev.start && (!ev.endDate||ev.endDate<=ev.date) && parseInt(ev.start)===h);
+      // Prendi tutti gli eventi del giorno (non solo quelli di quest'ora) per il layout
+      // ma mostra solo quelli che iniziano in quest'ora nella cella corrente
+      const allDayEvs = getEventsForDay(ds).filter(ev => ev.start && (!ev.endDate||ev.endDate<=ev.date));
+      const layout = computeEventLayout(allDayEvs, HOUR_H);
+      const cellEvs = layout.filter(item => Math.floor(item.top/HOUR_H)===h);
       grid += `<div class="week-cell" onclick="openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')">`;
-      sEvs.forEach(ev => {
+      cellEvs.forEach(item => {
+        const { ev, col, totalCols } = item;
         const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
         const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
         const startMin=sh*60+sm, endMin=Math.max(eh*60+em,startMin+30);
         const topOff = (sm/60)*HOUR_H;
         const height = Math.max(((endMin-startMin)/60)*HOUR_H, 22);
         const cal = ev.calendar||'local';
-        grid += `<div class="wtl-event ${cal}" style="top:${topOff}px;height:${height}px"
+        const w = totalCols > 1 ? `calc(${100/totalCols}% - 3px)` : 'calc(100% - 4px)';
+        const l = totalCols > 1 ? `calc(${(col/totalCols)*100}% + 2px)` : '2px';
+        grid += `<div class="wtl-event ${cal}" style="top:${topOff}px;height:${height}px;left:${l};width:${w}"
           onclick="event.stopPropagation();openEditEvent('${ev.id}')">
           <span class="wtl-ev-time">${ev.start}${ev.end?'–'+ev.end:''}</span>
           <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</span>
