@@ -209,6 +209,44 @@
   --success: #5be5a0;
 }
 
+/* ── TEMA CHIARO ── */
+.theme-light {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface2: #eef0f5;
+  --border: #d8dce8;
+  --text: #1a1d2e;
+  --muted: #7a7f9a;
+  --accent: #6254e8;
+  --google: #0288d1;
+  --outlook: #d84315;
+  --success: #2e7d32;
+}
+.theme-light #page-calendar::before { display: none; }
+.theme-light .event-chip.google  { background: rgba(2,136,209,.12); }
+.theme-light .event-chip.outlook { background: rgba(216,67,21,.12); }
+.theme-light .event-chip.local   { background: rgba(46,125,50,.12); }
+.theme-light .wtl-event.google   { background: rgba(2,136,209,.15); }
+.theme-light .wtl-event.outlook  { background: rgba(216,67,21,.15); }
+.theme-light .wtl-event.local    { background: rgba(46,125,50,.15); }
+.theme-light #cal-header { background: rgba(245,246,250,.92); }
+
+/* ── TOGGLE TEMA ── */
+.theme-toggle {
+  width: 34px; height: 20px; border-radius: 99px;
+  background: var(--border); border: none; cursor: pointer;
+  position: relative; transition: background .2s; flex-shrink: 0;
+  padding: 0;
+}
+.theme-toggle::after {
+  content: '';
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--muted); transition: all .2s;
+}
+.theme-light .theme-toggle { background: var(--accent); }
+.theme-light .theme-toggle::after { left: calc(100% - 17px); background: #fff; }
+
 #page-calendar {
   font-family: 'Jost', sans-serif;
   background: var(--bg);
@@ -434,15 +472,17 @@
 
 /* Timeline events */
 .wtl-event {
-  position: absolute; left: 2px; right: 2px;
+  position: absolute;
+  left: 2px; right: 2px; /* default, overridden by JS for overlaps */
   border-radius: 5px; padding: 3px 5px;
   font-size: .65rem; overflow: hidden;
   cursor: pointer; z-index: 2;
   display: flex; flex-direction: column; gap: 1px;
   border-left: 3px solid;
-  transition: filter .15s;
+  transition: filter .15s, box-shadow .15s;
+  box-sizing: border-box;
 }
-.wtl-event:hover { filter: brightness(1.2); }
+.wtl-event:hover { filter: brightness(1.2); box-shadow: 0 2px 8px rgba(0,0,0,.3); z-index: 3; }
 .wtl-event.google  { background: rgba(79,195,247,.2);  color: var(--google);  border-color: var(--google); }
 .wtl-event.outlook { background: rgba(249,123,107,.2); color: var(--outlook); border-color: var(--outlook); }
 .wtl-event.local   { background: rgba(91,229,160,.2);  color: var(--success); border-color: var(--success); }
@@ -784,6 +824,7 @@
         </div>
       </div>
       <button class="btn primary" onclick="openNewEvent()">+ Evento</button>
+      <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Cambia tema"></button>
       <button class="btn" id="btn-refresh" onclick="refreshCalendars()" title="Aggiorna calendari" style="padding:6px 10px">🔄</button>
       <div class="user-badge" onclick="toggleDropdown()">
         <div class="avatar-circle" id="header-avatar">🧑</div>
@@ -822,8 +863,8 @@
     </div>
     <div class="period-title" id="period-title"></div>
     <div class="view-tabs">
-      <div class="view-tab active" onclick="setView('month')" id="tab-month">Mese</div>
-      <div class="view-tab" onclick="setView('week')" id="tab-week">Settimana</div>
+      <div class="view-tab" onclick="setView('month')" id="tab-month">Mese</div>
+      <div class="view-tab active" onclick="setView('week')" id="tab-week">Settimana</div>
       <div class="view-tab" onclick="setView('day')" id="tab-day">Giorno</div>
     </div>
   </div>
@@ -832,10 +873,10 @@
 
   <!-- BOTTOM NAV (mobile only) -->
   <div id="bottom-nav">
-    <div class="bottom-nav-item active" id="bnav-month" onclick="setView('month');setBottomNav('month')">
+    <div class="bottom-nav-item" id="bnav-month" onclick="setView('month');setBottomNav('month')">
       <span class="nav-icon">📅</span>Mese
     </div>
-    <div class="bottom-nav-item" id="bnav-week" onclick="setView('week');setBottomNav('week')">
+    <div class="bottom-nav-item active" id="bnav-week" onclick="setView('week');setBottomNav('week')">
       <span class="nav-icon">📆</span>Settimana
     </div>
     <div class="bottom-nav-item" id="bnav-day" onclick="setView('day');setBottomNav('day')">
@@ -1209,7 +1250,7 @@ async function doRegister() {
 // ══════════════════════════════════════════
 //  CALENDAR STATE
 // ══════════════════════════════════════════
-let currentView = 'month';
+let currentView = 'week';
 let currentDate = new Date();
 let events = DB.events();
 let googleConnected = false, outlookConnected = false;
@@ -1264,11 +1305,9 @@ function enterCalendar() {
       DB.listenEvents(currentUser.familyId, () => render());
     }
   });
+  applyTheme();
   render();
 }
-
-
-function autoConnectGoogle() {
   // Se c'è già un token valido in sessionStorage usalo
   const savedToken = sessionStorage.getItem('google_token');
   if (savedToken) {
@@ -1278,6 +1317,22 @@ function autoConnectGoogle() {
   }
   // Altrimenti salva il client ID per quando l'utente clicca il pill
   localStorage.setItem('calsync_google_client_id', GOOGLE_CLIENT_ID);
+}
+
+function toggleTheme() {
+  const cal = document.getElementById('page-calendar');
+  const isLight = cal.classList.toggle('theme-light');
+  localStorage.setItem('fc_theme', isLight ? 'light' : 'dark');
+  // Aggiorna meta theme-color
+  document.querySelector('meta[name="theme-color"]').content = isLight ? '#f5f6fa' : '#0e0f13';
+}
+
+function applyTheme() {
+  const saved = localStorage.getItem('fc_theme');
+  if (saved === 'light') {
+    document.getElementById('page-calendar').classList.add('theme-light');
+    document.querySelector('meta[name="theme-color"]').content = '#f5f6fa';
+  }
 }
 
 function setBottomNav(v) {
@@ -1464,6 +1519,53 @@ function renderMonth() {
   initSwipe();
 }
 
+// ── OVERLAP LAYOUT ──
+// Calcola colonne per eventi sovrapposti (come Google Calendar)
+function computeEventLayout(evs, HOUR_H) {
+  // Converti orari in minuti
+  const items = evs.map(ev => {
+    const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
+    const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
+    const startMin = sh*60+sm;
+    const endMin   = Math.max(eh*60+em, startMin+30);
+    return { ev, startMin, endMin,
+      top: (startMin/60)*HOUR_H,
+      height: Math.max(((endMin-startMin)/60)*HOUR_H, 22),
+      col: 0, totalCols: 1
+    };
+  });
+
+  // Algoritmo sweep line per rilevare sovrapposizioni
+  // Assegna colonne agli eventi
+  const cols = []; // cols[i] = endMin dell'ultimo evento nella colonna i
+  items.forEach(item => {
+    let placed = false;
+    for (let c = 0; c < cols.length; c++) {
+      if (cols[c] <= item.startMin) {
+        item.col = c;
+        cols[c] = item.endMin;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      item.col = cols.length;
+      cols.push(item.endMin);
+    }
+  });
+
+  // Calcola totalCols per ogni gruppo sovrapposto
+  items.forEach(item => {
+    // Trova tutti gli eventi che si sovrappongono con questo
+    const overlapping = items.filter(other =>
+      other.startMin < item.endMin && other.endMin > item.startMin
+    );
+    item.totalCols = Math.max(...overlapping.map(o => o.col)) + 1;
+  });
+
+  return items;
+}
+
 // ── SWIPE GESTURE ──
 function initSwipe() {
   const el = document.getElementById('cal-main');
@@ -1542,15 +1644,15 @@ function renderWeek() {
   for (let i=0;i<7;i++) {
     const ds = weekDays[i];
     const dayEvs = getEventsForDay(ds).filter(ev => ev.start && (!ev.endDate || ev.endDate <= ev.date));
+    const layout = computeEventLayout(dayEvs, HOUR_H);
     body += `<div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
     for (let h=0;h<24;h++) body += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
-    dayEvs.forEach(ev => {
-      const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
-      const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
-      const startMin = sh*60+sm, endMin = Math.max(eh*60+em, startMin+30);
-      const top = (startMin/60)*HOUR_H, height = Math.max(((endMin-startMin)/60)*HOUR_H, 22);
+    layout.forEach(item => {
+      const { ev, top, height, col, totalCols } = item;
       const cal = ev.calendar||'local';
-      body += `<div class="wtl-event ${cal}" style="top:${top}px;height:${height}px" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+      const w = `${100/totalCols}%`;
+      const l = `${(col/totalCols)*100}%`;
+      body += `<div class="wtl-event ${cal}" style="top:${top}px;height:${height}px;left:${l};width:${w}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
         <span class="wtl-ev-time">${ev.start}${ev.end?'–'+ev.end:''}</span>
         <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</span>
       </div>`;
@@ -1610,21 +1712,22 @@ function renderDay() {
   fixedTop += '</div>';
 
   // Corpo scorrevole con ore
+  const layout = computeEventLayout(timedEvs, HOUR_H);
   let body = `<div class="day-scroll-body"><div class="wtl-hours">`;
   for (let h=0;h<24;h++) body += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
   body += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
   for (let h=0;h<24;h++) body += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
-  timedEvs.forEach(ev => {
-    const [sh,sm]=(ev.start||'00:00').split(':').map(Number);
-    const [eh,em]=(ev.end||`${sh+1}:00`).split(':').map(Number);
-    const startMin=sh*60+sm, endMin=Math.max(eh*60+em,startMin+30);
-    const top=(startMin/60)*HOUR_H, height=Math.max(((endMin-startMin)/60)*HOUR_H,28);
-    const cal=ev.calendar||'local';
-    body += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+  layout.forEach(item => {
+    const { ev, top, height, col, totalCols } = item;
+    const cal = ev.calendar||'local';
+    const w = `calc(${100/totalCols}% - 4px)`;
+    const l = `calc(${(col/totalCols)*100}% + 2px)`;
+    body += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px;left:${l};width:${w}" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
       <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
       <span class="wtl-ev-title">${ev.title}</span>
       ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
     </div>`;
+  });
   });
   body += '</div></div>';
 
