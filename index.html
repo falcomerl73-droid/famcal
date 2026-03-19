@@ -1730,7 +1730,6 @@ function renderDay() {
       ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
     </div>`;
   });
-  });
   body += '</div></div>';
 
   document.getElementById('cal-main').innerHTML = `<div class="day-view-new">${fixedTop}${body}</div>`;
