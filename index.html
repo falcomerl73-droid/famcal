@@ -1308,6 +1308,8 @@ function enterCalendar() {
   applyTheme();
   render();
 }
+
+function autoConnectGoogle() {
   // Se c'è già un token valido in sessionStorage usalo
   const savedToken = sessionStorage.getItem('google_token');
   if (savedToken) {
