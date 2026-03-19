@@ -412,11 +412,12 @@
   height: calc(100vh - 210px); min-height: 400px;
 }
 .week-header-row {
-  display: grid; grid-template-columns: 52px repeat(7,1fr);
-  gap: 1px; background: var(--border); flex-shrink: 0;
+  display: flex; flex-shrink: 0;
+  background: var(--border); gap: 1px;
 }
-.week-corner { background: var(--surface); }
-.week-body { overflow-y: auto; flex: 1; background: var(--border); }
+.week-corner { background: var(--surface); flex-shrink: 0; width: 52px; }
+.week-header-row .week-day-hdr { flex: 1; min-width: 0; }
+.week-body { overflow-y: auto; overflow-x: hidden; flex: 1; background: var(--border); }
 .week-body-grid {
   display: grid; grid-template-columns: 52px repeat(7,1fr);
   gap: 1px; background: var(--border);
@@ -448,7 +449,8 @@
 .week-timeline, .day-body > div {
   display: flex;
 }
-.week-timeline { display: flex; }
+.week-timeline { display: flex; width: 100%; }
+.week-timeline .wtl-day-col { flex: 1; min-width: 0; }
 .wtl-hours {
   flex-shrink: 0; width: 52px;
   border-right: 1px solid var(--border);
@@ -542,11 +544,17 @@
 
 /* All-day banner week view */
 .week-allday-row {
-  display: grid; grid-template-columns: 52px repeat(7,1fr);
-  gap: 1px; background: var(--border); flex-shrink: 0;
+  display: flex; flex-shrink: 0;
+  background: var(--border); gap: 1px;
   border-bottom: 2px solid var(--border);
 }
+.week-allday-row .week-corner {
+  font-size: .55rem; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  padding: 2px; flex-shrink: 0; width: 52px;
+}
 .week-allday-cell {
+  flex: 1; min-width: 0;
   background: var(--surface2); padding: 2px 1px;
   display: flex; flex-direction: column; gap: 2px; min-height: 26px;
 }
@@ -674,10 +682,10 @@
   /* Week/Day view mobile */
   .week-wrapper { height: calc(100vh - 180px); }
   .day-wrapper  { height: calc(100vh - 180px); }
-  .week-header-row { grid-template-columns: 36px repeat(7,minmax(52px,1fr)); }
+  .week-corner, .week-header-row .week-corner, .week-allday-row .week-corner { width: 36px; }
   .wtl-hours { width: 36px; }
-  .week-timeline { min-width: calc(36px + 7 * 52px); }
   .week-body { overflow-x: auto; overflow-y: auto; }
+  .week-timeline { min-width: calc(36px + 7 * 52px); }
   .week-day-hdr .wdd { font-size: 1rem; }
   .week-day-hdr .wdn { font-size: .55rem; }
   .wtl-event { font-size: .58rem; padding: 2px 3px; }
