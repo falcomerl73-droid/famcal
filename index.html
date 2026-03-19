@@ -453,6 +453,49 @@
 .day-ev .wtl-ev-title { font-size: .8rem; white-space: normal; }
 .day-ev .wtl-ev-time  { font-size: .7rem; }
 
+/* ── DAY VIEW NUOVO ── */
+.day-view-new {
+  display: flex; flex-direction: column;
+  height: calc(100vh - 210px); min-height: 400px;
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.day-fixed-header {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+}
+.day-title-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px 10px;
+}
+.day-big-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.8rem; line-height: 1;
+  color: var(--text); width: 56px; text-align: center;
+}
+.day-big-num.today {
+  background: var(--accent); color: #fff;
+  border-radius: 14px; width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+}
+.day-big-name {
+  font-size: .9rem; font-weight: 600; color: var(--text);
+  text-transform: capitalize;
+}
+.day-big-name span { font-size: .75rem; color: var(--muted); font-weight: 400; }
+.day-allday-banner {
+  padding: 4px 8px 6px;
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+}
+.day-scroll-body {
+  flex: 1; overflow-y: auto;
+  display: flex;
+}
+.day-scroll-body .wtl-hours { flex-shrink: 0; }
+.day-scroll-body .wtl-day-col { flex: 1; }
+
 /* All-day banner week view */
 .week-allday-row {
   display: grid; grid-template-columns: 52px repeat(7,1fr);
@@ -1536,114 +1579,66 @@ function renderWeek() {
 
 function renderDay() {
   const ds = fmt(currentDate);
-  document.getElementById('period-title').textContent =
-    `${DAYS_IT[currentDate.getDay()===0?6:currentDate.getDay()-1]}, ${currentDate.getDate()} ${MONTHS_IT[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  const dayName = DAYS_IT[currentDate.getDay()===0?6:currentDate.getDay()-1];
+  const dayNum  = currentDate.getDate();
+  const monthName = MONTHS_IT[currentDate.getMonth()];
+  const year = currentDate.getFullYear();
+  document.getElementById('period-title').textContent = `${dayName}, ${dayNum} ${monthName} ${year}`;
 
   const HOUR_H = 64;
   const allEvs = events.filter(e => activeMemberFilter ? (!e.authorId||e.authorId===activeMemberFilter) : true);
   const multiEvs = allEvs.filter(ev => ev.endDate && ev.endDate > ev.date && ds >= ev.date && ds <= ev.endDate);
   const timedEvs = allEvs.filter(ev => ev.date===ds && ev.start && (!ev.endDate||ev.endDate<=ev.date));
 
-  // Banner multi-giorno
-  let banner = '';
+  // Header fisso con nome giorno + banner eventi multi-giorno
+  let fixedTop = '<div class="day-fixed-header">';
+  fixedTop += `<div class="day-title-row">
+    <div class="day-big-num${ds===today()?' today':''}">${dayNum}</div>
+    <div class="day-big-name">${dayName}<br><span>${monthName} ${year}</span></div>
+  </div>`;
   if (multiEvs.length > 0) {
-    banner = '<div class="day-allday-banner">';
+    fixedTop += '<div class="day-allday-banner">';
     multiEvs.forEach(ev => {
       const cal = ev.calendar||'local';
-      banner += `<div class="event-chip ${cal} multiday solo" onclick="openEditEvent('${ev.id}')" title="${ev.title}">
+      fixedTop += `<div class="event-chip ${cal} multiday solo" onclick="openEditEvent('${ev.id}')" title="${ev.title}">
         ${ev.authorAvatar?ev.authorAvatar+' ':''}📅 ${ev.title}
         <span style="opacity:.7;font-size:.9em"> · ${ev.date} → ${ev.endDate}</span>
       </div>`;
     });
-    banner += '</div>';
+    fixedTop += '</div>';
   }
+  fixedTop += '</div>';
 
-  let html = `<div class="day-wrapper">${banner}<div class="day-body"><div class="wtl-hours">`;
-  for (let h=0;h<24;h++) html += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
-  html += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
-  for (let h=0;h<24;h++) html += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
+  // Corpo scorrevole con ore
+  let body = `<div class="day-scroll-body"><div class="wtl-hours">`;
+  for (let h=0;h<24;h++) body += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
+  body += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
+  for (let h=0;h<24;h++) body += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
   timedEvs.forEach(ev => {
     const [sh,sm]=(ev.start||'00:00').split(':').map(Number);
     const [eh,em]=(ev.end||`${sh+1}:00`).split(':').map(Number);
     const startMin=sh*60+sm, endMin=Math.max(eh*60+em,startMin+30);
     const top=(startMin/60)*HOUR_H, height=Math.max(((endMin-startMin)/60)*HOUR_H,28);
     const cal=ev.calendar||'local';
-    html += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+    body += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px" onclick="event.stopPropagation();openEditEvent('${ev.id}')">
       <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
       <span class="wtl-ev-title">${ev.title}</span>
       ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
     </div>`;
   });
-  html += '</div></div></div>';
-  document.getElementById('cal-main').innerHTML = html;
+  body += '</div></div>';
 
-  const dayBody = document.querySelector('.day-body');
-  if (dayBody) {
-    const now = new Date();
-    dayBody.scrollTop = Math.max(0, (now.getHours()-1)*HOUR_H);
-    const topPx = ((now.getHours()*60+now.getMinutes())/60)*HOUR_H;
-    setTimeout(() => {
-      const col = document.querySelector('.day-body .wtl-day-col');
-      if (col) { const l=document.createElement('div'); l.className='now-line'; l.style.top=topPx+'px'; col.appendChild(l); }
-    }, 50);
-  }
-  initSwipe();
-}
-
-function renderDay() {
-  const ds = fmt(currentDate);
-  document.getElementById('period-title').textContent =
-    `${DAYS_IT[currentDate.getDay()===0?6:currentDate.getDay()-1]}, ${currentDate.getDate()} ${MONTHS_IT[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-
-  const HOUR_H = 64;
-  const dayEvs = getEventsForDay(ds).filter(ev => ev.start);
-
-  let html = `<div class="day-wrapper">
-    <div class="day-body">
-      <div class="wtl-hours">`;
-  for (let h=0;h<24;h++) {
-    html += `<div class="wtl-hour-lbl" style="height:${HOUR_H}px">${String(h).padStart(2,'0')}:00</div>`;
-  }
-  html += `</div><div class="wtl-day-col" style="height:${HOUR_H*24}px" onclick="openNewEventOnDate('${ds}')">`;
-
-  for (let h=0;h<24;h++) {
-    html += `<div class="wtl-hour-line" style="top:${h*HOUR_H}px" onclick="event.stopPropagation();openNewEventOnDate('${ds}','${String(h).padStart(2,'0')}:00')"></div>`;
-  }
-
-  dayEvs.forEach(ev => {
-    const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
-    const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
-    const startMin = sh*60+sm;
-    const endMin   = Math.max(eh*60+em, startMin+30);
-    const top    = (startMin / 60) * HOUR_H;
-    const height = Math.max(((endMin - startMin) / 60) * HOUR_H, 28);
-    const cal    = ev.calendar||'local';
-    html += `<div class="wtl-event ${cal} day-ev" style="top:${top}px;height:${height}px"
-      onclick="event.stopPropagation();openEditEvent('${ev.id}')">
-      <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
-      <span class="wtl-ev-title">${ev.title}</span>
-      ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
-    </div>`;
-  });
-
-  html += '</div></div></div>';
-  document.getElementById('cal-main').innerHTML = html;
+  document.getElementById('cal-main').innerHTML = `<div class="day-view-new">${fixedTop}${body}</div>`;
 
   // Scorri all'ora corrente + linea ora
-  const dayBody = document.querySelector('.day-body');
-  if (dayBody) {
+  const scrollBody = document.querySelector('.day-scroll-body');
+  if (scrollBody) {
     const now = new Date();
-    const currentHour = now.getHours();
-    dayBody.scrollTop = Math.max(0, (currentHour - 1) * HOUR_H);
-    const topPx = ((now.getHours()*60 + now.getMinutes()) / 60) * HOUR_H;
+    scrollBody.scrollTop = Math.max(0, (now.getHours()-1)*HOUR_H);
+    const topPx = ((now.getHours()*60+now.getMinutes())/60)*HOUR_H;
     setTimeout(() => {
-      const col = document.querySelector('.day-body .wtl-day-col');
-      if (col) {
-        const line = document.createElement('div');
-        line.className = 'now-line';
-        line.style.top = topPx + 'px';
-        col.appendChild(line);
-      }
+      const col = document.querySelector('.day-scroll-body .wtl-day-col');
+      if (col) { const l=document.createElement('div'); l.className='now-line'; l.style.top=topPx+'px'; col.appendChild(l); }
     }, 50);
   }
   initSwipe();
