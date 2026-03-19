@@ -390,14 +390,18 @@
 
 /* Multi-day events */
 .event-chip.multiday {
-  border-radius: 0; margin: 0 -7px; padding: 2px 7px;
+  border-radius: 0; margin: 0 -7px; padding: 3px 7px;
   position: relative; z-index: 2;
+  height: 20px; line-height: 14px;
+  display: flex; align-items: center;
+  font-weight: 600; font-size: .66rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .event-chip.multiday.start { border-radius: 4px 0 0 4px; margin-left: 0; }
 .event-chip.multiday.end   { border-radius: 0 4px 4px 0; margin-right: 0; }
 .event-chip.multiday.solo  { border-radius: 4px; margin: 0; }
-.event-chip.multiday.cont  { opacity: .85; }
-.event-chip.placeholder    { visibility: hidden; pointer-events: none; }
+.event-chip.multiday.cont  { opacity: .9; }
+.event-chip.placeholder    { visibility: hidden; pointer-events: none; height: 20px; }
 
 /* week grid */
 /* Week view — header fisso, ore scorrevoli */
@@ -544,7 +548,7 @@
 }
 .week-allday-cell {
   background: var(--surface2); padding: 2px 1px;
-  display: flex; flex-direction: column; gap: 2px; min-height: 24px;
+  display: flex; flex-direction: column; gap: 2px; min-height: 26px;
 }
 
 /* All-day banner day view */
