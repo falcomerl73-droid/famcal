@@ -1110,6 +1110,8 @@ function showPage(name) {
 //  GOOGLE CLIENT ID (fisso)
 // ══════════════════════════════════════════
 const GOOGLE_CLIENT_ID = '676165380330-l4p2od0q8s1lbt7rbj79bc19o5jj9kvk.apps.googleusercontent.com';
+const GOOGLE_API_KEY     = 'AIzaSyCJ9v-HQiCHH5T38JVaKsg0cWBmqE05xhs';
+const CALENDAR_EMAIL     = 'falcomerl73@gmail.com';
 
 
 const firebaseConfig = {
@@ -1405,26 +1407,23 @@ function enterCalendar() {
   });
   applyTheme();
   render();
-  // Aggiorna Google Calendar ogni 15 minuti
+  // Aggiorna Google Calendar ogni 5 minuti con API Key (non scade)
   setInterval(() => {
-    if (googleConnected && googleToken) {
-      fetchGoogleEvents();
-    } else if (localStorage.getItem('calsync_google_api_key')) {
-      fetchGoogleEventsWithKey(localStorage.getItem('calsync_google_api_key'));
-    }
-  }, 15 * 60 * 1000);
+    fetchGoogleEventsWithKey(GOOGLE_API_KEY);
+  }, 5 * 60 * 1000);
 }
 
 function autoConnectGoogle() {
-  // Se c'è già un token valido in sessionStorage usalo
+  // Prima prova con token OAuth se disponibile
   const savedToken = sessionStorage.getItem('google_token');
   if (savedToken) {
     googleToken = savedToken;
     fetchGoogleEvents();
     return;
   }
-  // Altrimenti salva il client ID per quando l'utente clicca il pill
-  localStorage.setItem('calsync_google_client_id', GOOGLE_CLIENT_ID);
+  // Altrimenti usa API Key per refresh automatico (sola lettura, non scade mai)
+  localStorage.setItem('calsync_google_api_key', GOOGLE_API_KEY);
+  fetchGoogleEventsWithKey(GOOGLE_API_KEY);
 }
 
 function toggleTheme() {
@@ -2108,13 +2107,35 @@ function connectGoogleReadOnly() {
 async function fetchGoogleEventsWithKey(key) {
   try {
     const now = new Date(), future = new Date(); future.setMonth(future.getMonth()+3);
-    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?key=${key}&timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=250`;
-    const data = await (await fetch(url)).json();
-    if (data.error) { showToast('❌ '+data.error.message); return; }
-    importGoogleEvents(data.items||[]);
+    // Lista tutti i calendari dell'utente tramite API Key
+    const calListUrl = `https://www.googleapis.com/calendar/v3/users/me/calendarList?key=${key}`;
+    const calListRes = await fetch(calListUrl);
+    let calendars = [];
+    if (calListRes.ok) {
+      const calListData = await calListRes.json();
+      calendars = calListData.items || [];
+    }
+    // Se calendarList non funziona con API Key, usa i calendari noti
+    if (!calendars.length) {
+      calendars = [
+        { id: CALENDAR_EMAIL },           // calendario principale
+        { id: 'primary' },                // alias primario
+      ];
+    }
+    let totalImported = 0;
+    const seen = new Set();
+    for (const cal of calendars) {
+      if (seen.has(cal.id)) continue;
+      seen.add(cal.id);
+      try {
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?key=${key}&timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=250`;
+        const data = await (await fetch(url)).json();
+        if (data.items) { importGoogleEvents(data.items); totalImported += data.items.length; }
+      } catch(e) { console.warn('Skip cal:', cal.id); }
+    }
     googleConnected = true; updatePills();
-    showToast(`✅ ${data.items?.length||0} eventi Google importati`); render();
-  } catch(e) { showToast('❌ Errore connessione Google'); }
+    if (totalImported > 0) render();
+  } catch(e) { console.warn('Errore fetchGoogleEventsWithKey:', e); }
 }
 async function fetchGoogleEvents() {
   try {
