@@ -2057,12 +2057,21 @@ function openNewEventOnDate(ds, st='') {
   if (st) document.getElementById('ev-start').value = st;
 }
 function openEditEvent(id) {
-  const ev = events.find(e => e.id===id); if (!ev) return;
+  // Per le occorrenze ricorrenti (_occ_N), trova il master
+  const masterId = id.replace(/_occ_\d+$/, '');
+  const isOccurrence = masterId !== id;
+  const ev = events.find(e => e.id===masterId) || events.find(e => e.id===id);
+  if (!ev) { showToast('⚠️ Evento non trovato'); return; }
+
   const isOwner = !ev.authorId || ev.authorId === currentUser?.id;
   const isReadOnly = !isOwner;
 
-  document.getElementById('event-modal-title').textContent = isReadOnly ? '👁️ Evento (sola lettura)' : 'Modifica Evento';
-  document.getElementById('event-id').value = id;
+  document.getElementById('event-modal-title').textContent =
+    isReadOnly ? '👁️ Evento (sola lettura)' :
+    isOccurrence ? '✏️ Modifica serie ricorrente' : 'Modifica Evento';
+
+  // Salva sempre l'ID master nel form
+  document.getElementById('event-id').value = masterId;
   document.getElementById('ev-title').value = ev.title;
   document.getElementById('ev-date').value  = ev.date;
   document.getElementById('ev-end-date').value = ev.endDate||'';
@@ -2074,23 +2083,22 @@ function openEditEvent(id) {
   document.getElementById('ev-recurrence-end').value = ev.recurrenceEnd||'';
   document.getElementById('recurrence-end-row').style.display = ev.recurrence ? 'flex' : 'none';
 
-  // Disabilita campi se non è il proprietario
-  ['ev-title','ev-date','ev-start','ev-end','ev-notes','ev-recurrence','ev-recurrence-end'].forEach(f => {
-    document.getElementById(f).disabled = isReadOnly;
-    document.getElementById(f).style.opacity = isReadOnly ? '.5' : '1';
-  });
-
-  // Nascondi pulsanti modifica/elimina se non è il proprietario
-  document.getElementById('btn-delete-event').style.display = isReadOnly ? 'none' : 'block';
-  document.querySelector('#overlay-event .btn.primary').style.display = isReadOnly ? 'none' : 'block';
-
-  // Mostra chi ha creato l'evento
+  // Se è un'occorrenza mostra un avviso
   const authorInfo = document.getElementById('ev-author-info');
   if (authorInfo) {
-    authorInfo.textContent = ev.authorName ? `Creato da: ${ev.authorAvatar||''} ${ev.authorName}` : '';
-    authorInfo.style.display = ev.authorName ? 'block' : 'none';
+    let infoText = ev.authorName ? `Creato da: ${ev.authorAvatar||''} ${ev.authorName}` : '';
+    if (isOccurrence) infoText = (infoText ? infoText + ' · ' : '') + '🔄 Modifica tutte le occorrenze';
+    authorInfo.textContent = infoText;
+    authorInfo.style.display = infoText ? 'block' : 'none';
   }
 
+  ['ev-title','ev-date','ev-start','ev-end','ev-notes','ev-recurrence','ev-recurrence-end'].forEach(f => {
+    const el = document.getElementById(f);
+    if (el) { el.disabled = isReadOnly; el.style.opacity = isReadOnly ? '.5' : '1'; }
+  });
+
+  document.getElementById('btn-delete-event').style.display = isReadOnly ? 'none' : 'block';
+  document.querySelector('#overlay-event .btn.primary').style.display = isReadOnly ? 'none' : 'block';
   document.getElementById('overlay-event').classList.add('open');
 }
 function closeEvent() {
