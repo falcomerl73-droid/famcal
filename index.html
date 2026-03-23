@@ -1618,6 +1618,11 @@ function enterCalendar() {
   DB.onReady(() => {
     if (currentUser?.familyId) {
       DB.listenEvents(currentUser.familyId, () => render());
+      // Carica e ascolta registro
+      loadRegistroFromFirebase().then(() => {
+        if (currentView === 'registro') renderRegistro();
+      });
+      listenRegistroUpdates();
     }
   });
   applyTheme();
@@ -2689,13 +2694,62 @@ let regState = { notes:'', participants:[], expenses:[], photos:[], audios:[], l
 function getRegistroEntries() {
   return JSON.parse(localStorage.getItem('fc_registro') || '[]');
 }
+
 function saveRegistroEntries(entries) {
   localStorage.setItem('fc_registro', JSON.stringify(entries));
-  // Salva su Firebase se disponibile
-  if (window.fbDB && currentUser?.familyId) {
-    const publicEntries = entries.filter(e => e.isPublic);
-    publicEntries.forEach(e => fbDB.ref(`registro/${currentUser.familyId}/${e.id}`).set(e));
-  }
+  if (!window.fbDB || !currentUser) return;
+  // Salva TUTTE le voci su Firebase:
+  // - voci pubbliche → registro/{familyId}/{id}  (visibili a tutta la famiglia)
+  // - voci private   → registro_private/{userId}/{id} (solo dell'utente)
+  entries.forEach(e => {
+    if (e.isPublic) {
+      fbDB.ref(`registro/${currentUser.familyId}/${e.id}`).set(e);
+    } else if (e.authorId === currentUser.id) {
+      fbDB.ref(`registro_private/${currentUser.id}/${e.id}`).set(e);
+    }
+  });
+}
+
+async function loadRegistroFromFirebase() {
+  if (!window.fbDB || !currentUser) return;
+  try {
+    const entries = [];
+    // Carica voci pubbliche della famiglia
+    const pubSnap = await fbDB.ref(`registro/${currentUser.familyId}`).get();
+    if (pubSnap.exists()) entries.push(...Object.values(pubSnap.val()));
+    // Carica voci private dell'utente
+    const privSnap = await fbDB.ref(`registro_private/${currentUser.id}`).get();
+    if (privSnap.exists()) {
+      Object.values(privSnap.val()).forEach(e => {
+        if (!entries.find(x => x.id === e.id)) entries.push(e);
+      });
+    }
+    if (entries.length) {
+      localStorage.setItem('fc_registro', JSON.stringify(entries));
+    }
+  } catch(e) { console.warn('Registro Firebase load error:', e); }
+}
+
+function listenRegistroUpdates() {
+  if (!window.fbDB || !currentUser?.familyId) return;
+  // Ascolta aggiornamenti in tempo reale delle voci pubbliche
+  fbDB.ref(`registro/${currentUser.familyId}`).on('value', snap => {
+    const existing = getRegistroEntries();
+    const publicEntries = snap.exists() ? Object.values(snap.val()) : [];
+    // Aggiorna solo le voci pubbliche, mantieni le private
+    const privateEntries = existing.filter(e => !e.isPublic && e.authorId === currentUser.id);
+    const merged = [...privateEntries];
+    publicEntries.forEach(e => {
+      if (!merged.find(x => x.id === e.id)) merged.push(e);
+      else {
+        const idx = merged.findIndex(x => x.id === e.id);
+        merged[idx] = e;
+      }
+    });
+    localStorage.setItem('fc_registro', JSON.stringify(merged));
+    // Aggiorna vista se siamo nel registro
+    if (currentView === 'registro') renderRegistro();
+  });
 }
 
 function openRegistroForEvent(eventId, eventTitle, eventDate) {
@@ -2969,9 +3023,13 @@ function editRegistroEntry(id) {
 function deleteRegistroEntry(id) {
   if (!confirm('Eliminare questo registro?')) return;
   let entries = getRegistroEntries();
+  const entry = entries.find(e => e.id===id);
   entries = entries.filter(e => e.id!==id);
   saveRegistroEntries(entries);
-  if (window.fbDB && currentUser?.familyId) fbDB.ref(`registro/${currentUser.familyId}/${id}`).remove();
+  if (window.fbDB && currentUser?.familyId) {
+    fbDB.ref(`registro/${currentUser.familyId}/${id}`).remove();
+    fbDB.ref(`registro_private/${currentUser.id}/${id}`).remove();
+  }
   closeRegistroDetail();
   renderRegistro();
   showToast('🗑️ Registro eliminato');
