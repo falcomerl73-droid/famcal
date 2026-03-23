@@ -1756,11 +1756,15 @@ document.addEventListener('click', e => {
 // ══════════════════════════════════════════
 function setView(v) {
   currentView = v;
-  ['month','week','day','agenda'].forEach(x => {
+  ['month','week','day','agenda','registro'].forEach(x => {
     const el = document.getElementById('tab-'+x);
     if (el) el.classList.toggle('active', x===v);
   });
-  render();
+  if (v === 'registro' && window.fbDB) {
+    loadRegistroFromFirebase().then(() => renderRegistro());
+  } else {
+    render();
+  }
 }
 function navigate(dir) {
   if (currentView==='month')     currentDate.setMonth(currentDate.getMonth()+dir);
@@ -2726,7 +2730,6 @@ async function loadRegistroFromFirebase() {
     }
     if (entries.length) {
       localStorage.setItem('fc_registro', JSON.stringify(entries));
-      if (currentView === 'registro') renderRegistro();
     }
   } catch(e) { console.warn('Registro Firebase load error:', e); }
 }
@@ -2941,12 +2944,6 @@ function saveRegistro() {
 
 function renderRegistro() {
   document.getElementById('period-title').textContent = 'Registro';
-
-  // Forza caricamento da Firebase ogni volta che si apre la vista
-  if (window.fbDB) {
-    loadRegistroFromFirebase();
-  }
-
   const allEntries = getRegistroEntries();
   const myEntries = allEntries.filter(e => e.authorId === currentUser?.id || e.isPublic);
   myEntries.sort((a,b) => b.date.localeCompare(a.date));
