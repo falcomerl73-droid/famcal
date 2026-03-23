@@ -632,6 +632,59 @@
   flex-shrink: 0;
 }
 
+/* ── AGENDA VIEW ── */
+.agenda-list { display: flex; flex-direction: column; gap: 2px; }
+.agenda-day-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 6px;
+  position: sticky; top: 0; z-index: 5;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  margin-top: 8px;
+}
+.agenda-day-header:first-child { margin-top: 0; }
+.agenda-today { background: rgba(124,106,247,.08); }
+.agenda-day-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.6rem; line-height: 1;
+  color: var(--muted); min-width: 36px;
+}
+.agenda-today .agenda-day-num { color: var(--accent); }
+.agenda-day-name { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.agenda-today .agenda-day-name { color: var(--text); }
+.agenda-today-badge {
+  margin-left: auto; background: var(--accent); color: #fff;
+  font-size: .65rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 99px; letter-spacing: .06em;
+}
+.agenda-event {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px; cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background .15s; margin: 1px 0;
+}
+.agenda-event:hover { background: var(--surface); }
+.agenda-event.google  { border-color: var(--google); }
+.agenda-event.outlook { border-color: var(--outlook); }
+.agenda-event.local   { border-color: var(--success); }
+.agenda-event-time { min-width: 100px; font-size: .75rem; color: var(--muted); padding-top: 2px; flex-shrink: 0; }
+.agenda-event-body { flex: 1; min-width: 0; }
+.agenda-event-title { font-size: .88rem; font-weight: 600; color: var(--text); }
+.agenda-event-notes { font-size: .72rem; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agenda-event-author { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+.agenda-avatar { margin-right: 4px; }
+.agenda-del-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: .9rem; opacity: 0; transition: opacity .15s;
+  padding: 2px 4px; flex-shrink: 0;
+}
+.agenda-event:hover .agenda-del-btn { opacity: 1; }
+@media(max-width:680px) {
+  .agenda-event-time { min-width: 70px; font-size: .68rem; }
+  .agenda-event-title { font-size: .82rem; }
+  .agenda-del-btn { opacity: 1; }
+}
+
 /* Current time indicator */
 .now-line {
   position: absolute; left: 0; right: 0; height: 2px;
@@ -948,6 +1001,7 @@
       <div class="view-tab" onclick="setView('month')" id="tab-month">Mese</div>
       <div class="view-tab active" onclick="setView('week')" id="tab-week">Settimana</div>
       <div class="view-tab" onclick="setView('day')" id="tab-day">Giorno</div>
+      <div class="view-tab" onclick="setView('agenda')" id="tab-agenda">Agenda</div>
     </div>
   </div>
 
@@ -1421,7 +1475,7 @@ function autoConnectGoogle() {
     fetchGoogleEvents();
     return;
   }
-  // Altrimenti usa API Key per refresh automatico (sola lettura, non scade mai)
+  // Usa API Key per refresh automatico (non scade mai)
   localStorage.setItem('calsync_google_api_key', GOOGLE_API_KEY);
   fetchGoogleEventsWithKey(GOOGLE_API_KEY);
 }
@@ -1443,7 +1497,7 @@ function applyTheme() {
 }
 
 function setBottomNav(v) {
-  ['month','week','day'].forEach(x => document.getElementById('bnav-'+x)?.classList.toggle('active', x===v));
+  ['month','week','day','agenda'].forEach(x => document.getElementById('bnav-'+x)?.classList.toggle('active', x===v));
 }
 
 function initUserUI() {
@@ -1513,7 +1567,10 @@ document.addEventListener('click', e => {
 // ══════════════════════════════════════════
 function setView(v) {
   currentView = v;
-  ['month','week','day'].forEach(x => document.getElementById('tab-'+x).classList.toggle('active', x===v));
+  ['month','week','day','agenda'].forEach(x => {
+    const el = document.getElementById('tab-'+x);
+    if (el) el.classList.toggle('active', x===v);
+  });
   render();
 }
 function navigate(dir) {
@@ -1527,7 +1584,100 @@ function goToday() { currentDate = new Date(); render(); }
 function render() {
   if (currentView==='month') renderMonth();
   else if (currentView==='week') renderWeek();
+  else if (currentView==='agenda') renderAgenda();
   else renderDay();
+}
+
+function renderAgenda() {
+  document.getElementById('period-title').textContent = 'Agenda';
+  const todayStr = today();
+  const allEvs = events.filter(e => activeMemberFilter ? (!e.authorId||e.authorId===activeMemberFilter) : true);
+
+  // Genera eventi per i prossimi 60 giorni (escluso passato)
+  const days = [];
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    days.push(fmt(d));
+  }
+
+  // Raccogli tutti gli eventi futuri espansi (inclusi ricorrenti)
+  const agendaItems = [];
+  days.forEach(ds => {
+    const dayEvs = expandRecurringEvents(allEvs, ds).filter(e => e.date === ds);
+    // Includi anche multi-giorno che coprono questo giorno
+    const multiEvs = allEvs.filter(ev => ev.endDate && ev.endDate > ev.date && ds >= ev.date && ds <= ev.endDate);
+    [...dayEvs, ...multiEvs.filter(ev => !dayEvs.find(e => e.id === ev.id))].forEach(ev => {
+      agendaItems.push({ ...ev, _agendaDate: ds });
+    });
+  });
+
+  // Ordina per data poi per ora
+  agendaItems.sort((a, b) => {
+    if (a._agendaDate !== b._agendaDate) return a._agendaDate.localeCompare(b._agendaDate);
+    return (a.start||'00:00').localeCompare(b.start||'00:00');
+  });
+
+  if (!agendaItems.length) {
+    document.getElementById('cal-main').innerHTML = `
+      <div style="text-align:center;padding:60px;color:var(--muted)">
+        <div style="font-size:2.5rem;margin-bottom:12px">🎉</div>
+        <div>Nessun impegno nei prossimi 60 giorni</div>
+      </div>`;
+    return;
+  }
+
+  // Raggruppa per data
+  const grouped = {};
+  agendaItems.forEach(ev => {
+    if (!grouped[ev._agendaDate]) grouped[ev._agendaDate] = [];
+    grouped[ev._agendaDate].push(ev);
+  });
+
+  let html = '<div class="agenda-list">';
+  Object.entries(grouped).forEach(([ds, evs]) => {
+    const d = new Date(ds + 'T12:00:00');
+    const isToday = ds === todayStr;
+    const dayName = DAYS_IT[d.getDay()===0?6:d.getDay()-1];
+    const monthName = MONTHS_IT[d.getMonth()];
+    html += `<div class="agenda-day-header${isToday?' agenda-today':''}">
+      <span class="agenda-day-num">${d.getDate()}</span>
+      <span class="agenda-day-name">${dayName} · ${monthName} ${d.getFullYear()}</span>
+      ${isToday ? '<span class="agenda-today-badge">Oggi</span>' : ''}
+    </div>`;
+    evs.forEach(ev => {
+      const cal = ev.calendar||'local';
+      const isMulti = ev.endDate && ev.endDate > ev.date;
+      const recIcon = ev.recurrence||ev.isOccurrence ? ' 🔄' : '';
+      const multiIcon = isMulti ? ' 📅' : '';
+      const av = ev.authorAvatar ? `<span class="agenda-avatar">${ev.authorAvatar}</span>` : '';
+      const timeStr = ev.start ? `${ev.start}${ev.end?' – '+ev.end:''}` : isMulti ? `${ev.date} → ${ev.endDate}` : 'Tutto il giorno';
+      const isOwner = !ev.authorId || ev.authorId === currentUser?.id;
+      html += `<div class="agenda-event ${cal}" onclick="openEditEvent('${ev.id}')">
+        <div class="agenda-event-time">${timeStr}</div>
+        <div class="agenda-event-body">
+          <div class="agenda-event-title">${av}${ev.title}${recIcon}${multiIcon}</div>
+          ${ev.notes ? `<div class="agenda-event-notes">${ev.notes}</div>` : ''}
+          ${ev.authorName && !isOwner ? `<div class="agenda-event-author">📌 ${ev.authorName}</div>` : ''}
+        </div>
+        ${isOwner ? `<button class="agenda-del-btn" onclick="event.stopPropagation();quickDeleteEvent('${ev.id}')">🗑️</button>` : ''}
+      </div>`;
+    });
+  });
+  html += '</div>';
+  document.getElementById('cal-main').innerHTML = html;
+  initSwipe();
+}
+
+function quickDeleteEvent(id) {
+  const masterId = id.replace(/_occ_\d+$/, '');
+  const ev = events.find(e => e.id===masterId) || events.find(e => e.id===id);
+  if (!ev) return;
+  if (ev?.authorId && ev.authorId !== currentUser?.id) { showToast('⚠️ Non puoi eliminare eventi altrui'); return; }
+  if (!confirm(`Eliminare "${ev.title}"?`)) return;
+  if (ev?.remoteId && ev.calendar==='google' && googleConnected) deleteGoogleEvent(ev);
+  events = events.filter(e => e.id!==masterId && e.id!==id);
+  saveLocal(); DB.deleteEvent(masterId);
+  render(); showToast('🗑️ Evento eliminato');
 }
 
 function renderMonth() {
@@ -2024,7 +2174,10 @@ function expandRecurringEvents(baseEvents, dateStr) {
 
 function deleteEvent() {
   const id = document.getElementById('event-id').value;
-  const ev = events.find(e => e.id===id);
+  // Cerca sia l'evento master che le occorrenze (rimuovi suffisso _occ_N)
+  const masterId = id.replace(/_occ_\d+$/, '');
+  const ev = events.find(e => e.id===masterId) || events.find(e => e.id===id);
+  if (!ev) { showToast('⚠️ Evento non trovato'); return; }
   // Verifica proprietà
   if (ev?.authorId && ev.authorId !== currentUser?.id) {
     showToast('⚠️ Non puoi eliminare eventi di altri familiari'); return;
@@ -2033,9 +2186,11 @@ function deleteEvent() {
     if (ev.calendar==='google'  && googleConnected)  deleteGoogleEvent(ev);
     if (ev.calendar==='outlook' && outlookConnected) deleteOutlookEvent(ev);
   }
-  events = events.filter(e => e.id!==id);
+  // Elimina il master (tutte le occorrenze spariscono di conseguenza)
+  events = events.filter(e => e.id!==masterId && e.id!==id);
   saveLocal();
-  DB.deleteEvent(id);
+  DB.deleteEvent(masterId);
+  if (masterId !== id) DB.deleteEvent(id);
   closeEvent(); render(); showToast('🗑️ Evento eliminato');
 }
 
