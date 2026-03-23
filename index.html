@@ -2726,28 +2726,39 @@ async function loadRegistroFromFirebase() {
     }
     if (entries.length) {
       localStorage.setItem('fc_registro', JSON.stringify(entries));
+      if (currentView === 'registro') renderRegistro();
     }
   } catch(e) { console.warn('Registro Firebase load error:', e); }
 }
 
 function listenRegistroUpdates() {
   if (!window.fbDB || !currentUser?.familyId) return;
-  // Ascolta aggiornamenti in tempo reale delle voci pubbliche
+  // Ascolta aggiornamenti pubblici in tempo reale
   fbDB.ref(`registro/${currentUser.familyId}`).on('value', snap => {
     const existing = getRegistroEntries();
     const publicEntries = snap.exists() ? Object.values(snap.val()) : [];
-    // Aggiorna solo le voci pubbliche, mantieni le private
+    // Mantieni voci private, aggiorna pubbliche
     const privateEntries = existing.filter(e => !e.isPublic && e.authorId === currentUser.id);
     const merged = [...privateEntries];
     publicEntries.forEach(e => {
-      if (!merged.find(x => x.id === e.id)) merged.push(e);
-      else {
-        const idx = merged.findIndex(x => x.id === e.id);
-        merged[idx] = e;
-      }
+      const idx = merged.findIndex(x => x.id === e.id);
+      if (idx >= 0) merged[idx] = e; else merged.push(e);
     });
     localStorage.setItem('fc_registro', JSON.stringify(merged));
-    // Aggiorna vista se siamo nel registro
+    if (currentView === 'registro') renderRegistro();
+  });
+  // Ascolta anche voci private dell'utente
+  fbDB.ref(`registro_private/${currentUser.id}`).on('value', snap => {
+    const existing = getRegistroEntries();
+    const privateEntries = snap.exists() ? Object.values(snap.val()) : [];
+    // Mantieni pubbliche, aggiorna private
+    const publicEntries = existing.filter(e => e.isPublic);
+    const merged = [...publicEntries];
+    privateEntries.forEach(e => {
+      const idx = merged.findIndex(x => x.id === e.id);
+      if (idx >= 0) merged[idx] = e; else merged.push(e);
+    });
+    localStorage.setItem('fc_registro', JSON.stringify(merged));
     if (currentView === 'registro') renderRegistro();
   });
 }
@@ -2930,6 +2941,12 @@ function saveRegistro() {
 
 function renderRegistro() {
   document.getElementById('period-title').textContent = 'Registro';
+
+  // Forza caricamento da Firebase ogni volta che si apre la vista
+  if (window.fbDB) {
+    loadRegistroFromFirebase();
+  }
+
   const allEntries = getRegistroEntries();
   const myEntries = allEntries.filter(e => e.authorId === currentUser?.id || e.isPublic);
   myEntries.sort((a,b) => b.date.localeCompare(a.date));
