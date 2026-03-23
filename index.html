@@ -632,6 +632,70 @@
   flex-shrink: 0;
 }
 
+/* ── REGISTRO ── */
+.registro-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.registro-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; cursor: pointer;
+  transition: all .18s; position: relative;
+}
+.registro-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+.registro-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.registro-card-title { font-weight: 600; font-size: .92rem; }
+.registro-card-date { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+.registro-card-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.reg-badge {
+  font-size: .65rem; padding: 2px 7px; border-radius: 99px;
+  background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+}
+.registro-card-preview { font-size: .78rem; color: var(--muted); margin-top: 8px; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.registro-photos-preview { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.registro-photos-preview img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+.reg-privacy { font-size: .65rem; position: absolute; top: 12px; right: 12px; opacity: .6; }
+
+/* Registro form items */
+.reg-participant-tag {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 99px; padding: 3px 10px; font-size: .75rem;
+}
+.reg-participant-tag button { background: none; border: none; cursor: pointer; color: var(--muted); font-size: .8rem; padding: 0 2px; }
+.reg-expense-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface2); border-radius: 7px; padding: 6px 10px;
+  font-size: .78rem;
+}
+.reg-expense-row button { background: none; border: none; cursor: pointer; color: var(--muted); }
+.reg-photo-thumb {
+  position: relative; width: 72px; height: 72px;
+}
+.reg-photo-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+.reg-photo-thumb button {
+  position: absolute; top: -6px; right: -6px;
+  background: var(--outlook); color: #fff; border: none;
+  border-radius: 50%; width: 18px; height: 18px;
+  font-size: .65rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.reg-audio-item {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border-radius: 8px; padding: 6px 10px;
+}
+.reg-audio-item audio { flex: 1; height: 28px; }
+.reg-audio-item button { background: none; border: none; cursor: pointer; color: var(--muted); }
+.reg-link-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .78rem;
+}
+.reg-link-item a { color: var(--accent); text-decoration: none; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reg-link-item button { background: none; border: none; cursor: pointer; color: var(--muted); }
+
+/* Registro detail */
+.reg-detail-section { margin-bottom: 20px; }
+.reg-detail-section h4 { font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.reg-detail-notes { font-size: .88rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+.reg-recording-active { animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
 /* ── AGENDA VIEW ── */
 .agenda-list { display: flex; flex-direction: column; gap: 2px; }
 .agenda-day-header {
@@ -675,7 +739,7 @@
 .agenda-avatar { margin-right: 4px; }
 .agenda-del-btn {
   background: none; border: none; cursor: pointer;
-  font-size: .9rem; opacity: 0; transition: opacity .15s;
+  font-size: .9rem; opacity: 0.4; transition: opacity .15s;
   padding: 2px 4px; flex-shrink: 0;
 }
 .agenda-event:hover .agenda-del-btn { opacity: 1; }
@@ -1002,6 +1066,7 @@
       <div class="view-tab active" onclick="setView('week')" id="tab-week">Settimana</div>
       <div class="view-tab" onclick="setView('day')" id="tab-day">Giorno</div>
       <div class="view-tab" onclick="setView('agenda')" id="tab-agenda">Agenda</div>
+      <div class="view-tab" onclick="setView('registro')" id="tab-registro">📖 Registro</div>
     </div>
   </div>
 
@@ -1021,8 +1086,8 @@
     <div class="bottom-nav-item" onclick="openNewEvent()">
       <span class="nav-icon">➕</span>Evento
     </div>
-    <div class="bottom-nav-item" onclick="refreshCalendars()">
-      <span class="nav-icon">🔄</span>Aggiorna
+    <div class="bottom-nav-item" id="bnav-registro" onclick="setView('registro');setBottomNav('registro')">
+      <span class="nav-icon">📖</span>Registro
     </div>
     <div class="bottom-nav-item" onclick="toggleDropdown()">
       <span class="nav-icon" id="bnav-avatar">🧑</span>Profilo
@@ -1142,6 +1207,99 @@
     <div style="margin-bottom:8px;font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Membri</div>
     <div id="family-members-list"></div>
     <div class="modal-actions"><button class="btn" onclick="closeFamily()">Chiudi</button></div>
+  </div>
+</div>
+
+<!-- REGISTRO MODAL -->
+<div class="overlay" id="overlay-registro">
+  <div class="modal" style="width:560px;max-height:90vh">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h3 id="registro-modal-title" style="margin:0">📖 Registro evento</h3>
+      <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="registro-public" style="accent-color:var(--accent)"> Condividi con famiglia
+      </label>
+    </div>
+
+    <!-- NOTE -->
+    <div class="form-row">
+      <label>📝 Note</label>
+      <textarea id="reg-notes" placeholder="Come è andato l'evento? Note, osservazioni..." style="min-height:80px"></textarea>
+    </div>
+
+    <!-- PARTECIPANTI -->
+    <div class="form-row">
+      <label>👥 Partecipanti</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="reg-participant-input" placeholder="Nome partecipante" style="flex:1" onkeydown="if(event.key==='Enter')addParticipant()">
+        <button class="btn" onclick="addParticipant()">+</button>
+      </div>
+      <div id="reg-participants-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+    </div>
+
+    <!-- SPESE -->
+    <div class="form-row">
+      <label>💰 Spese</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input type="text" id="reg-expense-desc" placeholder="Descrizione" style="flex:2;min-width:100px">
+        <input type="number" id="reg-expense-amount" placeholder="€" style="flex:1;min-width:70px" step="0.01">
+        <button class="btn" onclick="addExpense()">+</button>
+      </div>
+      <div id="reg-expenses-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+      <div id="reg-expenses-total" style="font-size:.8rem;font-weight:600;color:var(--accent);margin-top:4px;text-align:right"></div>
+    </div>
+
+    <!-- FOTO -->
+    <div class="form-row">
+      <label>📸 Foto</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label class="btn" style="cursor:pointer;margin:0">
+          📁 Carica
+          <input type="file" id="reg-photo-input" accept="image/*" multiple style="display:none" onchange="addPhotos(this)">
+        </label>
+        <button class="btn" onclick="takePhoto()">📷 Scatta</button>
+      </div>
+      <div id="reg-photos-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+    </div>
+
+    <!-- AUDIO -->
+    <div class="form-row">
+      <label>🎤 Messaggi vocali</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="reg-record-btn" onclick="toggleRecording()">⏺️ Registra</button>
+        <span id="reg-record-status" style="font-size:.75rem;color:var(--muted)"></span>
+      </div>
+      <div id="reg-audio-list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+    </div>
+
+    <!-- LINK -->
+    <div class="form-row">
+      <label>🔗 Link utili</label>
+      <div style="display:flex;gap:6px">
+        <input type="url" id="reg-link-input" placeholder="https://..." style="flex:1" onkeydown="if(event.key==='Enter')addLink()">
+        <button class="btn" onclick="addLink()">+</button>
+      </div>
+      <div id="reg-links-list" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeRegistro()">Annulla</button>
+      <button class="btn primary" onclick="saveRegistro()">💾 Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTRO DETAIL MODAL -->
+<div class="overlay" id="overlay-registro-detail">
+  <div class="modal" style="width:560px;max-height:90vh">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 id="reg-detail-title" style="margin:0"></h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="editRegistroEntry(currentRegistroId)">✏️</button>
+        <button class="btn danger" onclick="deleteRegistroEntry(currentRegistroId)">🗑️</button>
+        <button class="btn" onclick="closeRegistroDetail()">✕</button>
+      </div>
+    </div>
+    <div id="reg-detail-content"></div>
   </div>
 </div>
 
@@ -1585,6 +1743,7 @@ function render() {
   if (currentView==='month') renderMonth();
   else if (currentView==='week') renderWeek();
   else if (currentView==='agenda') renderAgenda();
+  else if (currentView==='registro') renderRegistro();
   else renderDay();
 }
 
@@ -1652,6 +1811,7 @@ function renderAgenda() {
       const av = ev.authorAvatar ? `<span class="agenda-avatar">${ev.authorAvatar}</span>` : '';
       const timeStr = ev.start ? `${ev.start}${ev.end?' – '+ev.end:''}` : isMulti ? `${ev.date} → ${ev.endDate}` : 'Tutto il giorno';
       const isOwner = !ev.authorId || ev.authorId === currentUser?.id;
+      const isPast = ev._agendaDate < today();
       html += `<div class="agenda-event ${cal}" onclick="openEditEvent('${ev.id}')">
         <div class="agenda-event-time">${timeStr}</div>
         <div class="agenda-event-body">
@@ -1659,7 +1819,10 @@ function renderAgenda() {
           ${ev.notes ? `<div class="agenda-event-notes">${ev.notes}</div>` : ''}
           ${ev.authorName && !isOwner ? `<div class="agenda-event-author">📌 ${ev.authorName}</div>` : ''}
         </div>
-        ${isOwner ? `<button class="agenda-del-btn" onclick="event.stopPropagation();quickDeleteEvent('${ev.id}')">🗑️</button>` : ''}
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+          <button class="agenda-del-btn" onclick="event.stopPropagation();openRegistroForEvent('${ev.id}','${ev.title.replace(/'/g,"\\'")}','${ev._agendaDate}')" title="Apri registro">📖</button>
+          ${isOwner ? `<button class="agenda-del-btn" onclick="event.stopPropagation();quickDeleteEvent('${ev.id}')">🗑️</button>` : ''}
+        </div>
       </div>`;
     });
   });
@@ -2437,6 +2600,309 @@ function parseOAuthCallback() {
 
 // ══════════════════════════════════════════
 //  BOOT
+// ══════════════════════════════════════════
+//  REGISTRO
+// ══════════════════════════════════════════
+let currentRegistroEventId = null;
+let currentRegistroId = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+// Stato temporaneo durante la compilazione
+let regState = { notes:'', participants:[], expenses:[], photos:[], audios:[], links:[], isPublic:false };
+
+function getRegistroEntries() {
+  return JSON.parse(localStorage.getItem('fc_registro') || '[]');
+}
+function saveRegistroEntries(entries) {
+  localStorage.setItem('fc_registro', JSON.stringify(entries));
+  // Salva su Firebase se disponibile
+  if (window.fbDB && currentUser?.familyId) {
+    const publicEntries = entries.filter(e => e.isPublic);
+    publicEntries.forEach(e => fbDB.ref(`registro/${currentUser.familyId}/${e.id}`).set(e));
+  }
+}
+
+function openRegistroForEvent(eventId, eventTitle, eventDate) {
+  currentRegistroEventId = eventId;
+  currentRegistroId = null;
+  regState = { notes:'', participants:[], expenses:[], photos:[], audios:[], links:[], isPublic:false };
+
+  document.getElementById('registro-modal-title').textContent = `📖 ${eventTitle}`;
+  document.getElementById('registro-public').checked = false;
+  document.getElementById('reg-notes').value = '';
+  document.getElementById('reg-participants-list').innerHTML = '';
+  document.getElementById('reg-expenses-list').innerHTML = '';
+  document.getElementById('reg-expenses-total').textContent = '';
+  document.getElementById('reg-photos-list').innerHTML = '';
+  document.getElementById('reg-audio-list').innerHTML = '';
+  document.getElementById('reg-links-list').innerHTML = '';
+  document.getElementById('reg-participant-input').value = '';
+  document.getElementById('reg-expense-desc').value = '';
+  document.getElementById('reg-expense-amount').value = '';
+  document.getElementById('reg-link-input').value = '';
+  document.getElementById('overlay-registro').classList.add('open');
+}
+
+function closeRegistro() {
+  document.getElementById('overlay-registro').classList.remove('open');
+  stopRecording();
+}
+
+function addParticipant() {
+  const input = document.getElementById('reg-participant-input');
+  const name = input.value.trim();
+  if (!name) return;
+  regState.participants.push(name);
+  input.value = '';
+  renderParticipants();
+}
+function removeParticipant(i) {
+  regState.participants.splice(i, 1);
+  renderParticipants();
+}
+function renderParticipants() {
+  document.getElementById('reg-participants-list').innerHTML = regState.participants.map((p,i) =>
+    `<div class="reg-participant-tag">${p}<button onclick="removeParticipant(${i})">✕</button></div>`
+  ).join('');
+}
+
+function addExpense() {
+  const desc = document.getElementById('reg-expense-desc').value.trim();
+  const amount = parseFloat(document.getElementById('reg-expense-amount').value);
+  if (!desc || isNaN(amount)) return;
+  regState.expenses.push({ desc, amount });
+  document.getElementById('reg-expense-desc').value = '';
+  document.getElementById('reg-expense-amount').value = '';
+  renderExpenses();
+}
+function removeExpense(i) { regState.expenses.splice(i,1); renderExpenses(); }
+function renderExpenses() {
+  document.getElementById('reg-expenses-list').innerHTML = regState.expenses.map((e,i) =>
+    `<div class="reg-expense-row"><span>${e.desc}</span><span>€${e.amount.toFixed(2)}<button onclick="removeExpense(${i})">✕</button></span></div>`
+  ).join('');
+  const total = regState.expenses.reduce((s,e) => s+e.amount, 0);
+  document.getElementById('reg-expenses-total').textContent = regState.expenses.length ? `Totale: €${total.toFixed(2)}` : '';
+}
+
+function addPhotos(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      regState.photos.push({ data: e.target.result, name: file.name });
+      renderPhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+function takePhoto() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.onchange = () => addPhotos(input);
+  input.click();
+}
+function removePhoto(i) { regState.photos.splice(i,1); renderPhotos(); }
+function renderPhotos() {
+  document.getElementById('reg-photos-list').innerHTML = regState.photos.map((p,i) =>
+    `<div class="reg-photo-thumb"><img src="${p.data}" alt="${p.name}"><button onclick="removePhoto(${i})">✕</button></div>`
+  ).join('');
+}
+
+async function toggleRecording() {
+  if (isRecording) { stopRecording(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const reader = new FileReader();
+      reader.onload = e => {
+        regState.audios.push({ data: e.target.result, ts: new Date().toLocaleTimeString() });
+        renderAudios();
+      };
+      reader.readAsDataURL(blob);
+      stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById('reg-record-btn').textContent = '⏹️ Stop';
+    document.getElementById('reg-record-btn').classList.add('reg-recording-active');
+    document.getElementById('reg-record-status').textContent = '● Registrazione in corso...';
+  } catch(e) { showToast('⚠️ Microfono non disponibile'); }
+}
+function stopRecording() {
+  if (mediaRecorder && isRecording) { mediaRecorder.stop(); }
+  isRecording = false;
+  const btn = document.getElementById('reg-record-btn');
+  if (btn) { btn.textContent = '⏺️ Registra'; btn.classList.remove('reg-recording-active'); }
+  const st = document.getElementById('reg-record-status');
+  if (st) st.textContent = '';
+}
+function removeAudio(i) { regState.audios.splice(i,1); renderAudios(); }
+function renderAudios() {
+  document.getElementById('reg-audio-list').innerHTML = regState.audios.map((a,i) =>
+    `<div class="reg-audio-item">
+      <span style="font-size:.7rem;color:var(--muted)">${a.ts}</span>
+      <audio controls src="${a.data}"></audio>
+      <button onclick="removeAudio(${i})">✕</button>
+    </div>`
+  ).join('');
+}
+
+function addLink() {
+  const input = document.getElementById('reg-link-input');
+  const url = input.value.trim();
+  if (!url) return;
+  regState.links.push(url);
+  input.value = '';
+  renderLinks();
+}
+function removeLink(i) { regState.links.splice(i,1); renderLinks(); }
+function renderLinks() {
+  document.getElementById('reg-links-list').innerHTML = regState.links.map((l,i) =>
+    `<div class="reg-link-item"><a href="${l}" target="_blank">${l}</a><button onclick="removeLink(${i})">✕</button></div>`
+  ).join('');
+}
+
+function saveRegistro() {
+  regState.notes = document.getElementById('reg-notes').value.trim();
+  regState.isPublic = document.getElementById('registro-public').checked;
+  if (!regState.notes && !regState.participants.length && !regState.expenses.length && !regState.photos.length && !regState.audios.length && !regState.links.length) {
+    showToast('⚠️ Aggiungi almeno un contenuto'); return;
+  }
+  const entries = getRegistroEntries();
+  const entry = {
+    id: currentRegistroId || 'reg_'+Date.now(),
+    eventId: currentRegistroEventId,
+    eventTitle: document.getElementById('registro-modal-title').textContent.replace('📖 ',''),
+    date: new Date().toISOString(),
+    authorId: currentUser?.id,
+    authorName: currentUser?.name,
+    authorAvatar: currentUser?.avatar,
+    isPublic: regState.isPublic,
+    notes: regState.notes,
+    participants: regState.participants,
+    expenses: regState.expenses,
+    photos: regState.photos,
+    audios: regState.audios,
+    links: regState.links,
+  };
+  const idx = entries.findIndex(e => e.id === entry.id);
+  if (idx >= 0) entries[idx] = entry; else entries.push(entry);
+  saveRegistroEntries(entries);
+  closeRegistro();
+  if (currentView === 'registro') renderRegistro();
+  showToast('✅ Registro salvato');
+}
+
+function renderRegistro() {
+  document.getElementById('period-title').textContent = 'Registro';
+  const allEntries = getRegistroEntries();
+  const myEntries = allEntries.filter(e => e.authorId === currentUser?.id || e.isPublic);
+  myEntries.sort((a,b) => b.date.localeCompare(a.date));
+
+  if (!myEntries.length) {
+    document.getElementById('cal-main').innerHTML = `
+      <div style="text-align:center;padding:60px;color:var(--muted)">
+        <div style="font-size:2.5rem;margin-bottom:12px">📖</div>
+        <div style="font-size:.9rem">Nessun registro ancora.<br>Vai su <b>Agenda</b> e clicca 📖 su un evento passato.</div>
+      </div>`;
+    return;
+  }
+
+  let html = '<div class="registro-list">';
+  myEntries.forEach(entry => {
+    const badges = [];
+    if (entry.notes) badges.push('📝 Note');
+    if (entry.photos?.length) badges.push(`📸 ${entry.photos.length} foto`);
+    if (entry.expenses?.length) {
+      const tot = entry.expenses.reduce((s,e)=>s+e.amount,0);
+      badges.push(`💰 €${tot.toFixed(2)}`);
+    }
+    if (entry.participants?.length) badges.push(`👥 ${entry.participants.length}`);
+    if (entry.audios?.length) badges.push(`🎤 ${entry.audios.length}`);
+    if (entry.links?.length) badges.push(`🔗 ${entry.links.length}`);
+
+    const previewPhotos = (entry.photos||[]).slice(0,4).map(p =>
+      `<img src="${p.data}" alt="">`
+    ).join('');
+
+    html += `<div class="registro-card" onclick="openRegistroDetail('${entry.id}')">
+      <span class="reg-privacy">${entry.isPublic ? '👨‍👩‍👧 Famiglia' : '🔒 Privato'}</span>
+      <div class="registro-card-header">
+        <div>
+          <div class="registro-card-title">${entry.eventTitle||'Evento'}</div>
+          <div class="registro-card-date">${entry.authorAvatar||''} ${entry.authorName||''} · ${new Date(entry.date).toLocaleDateString('it-IT')}</div>
+        </div>
+      </div>
+      ${badges.length ? `<div class="registro-card-badges">${badges.map(b=>`<span class="reg-badge">${b}</span>`).join('')}</div>` : ''}
+      ${entry.notes ? `<div class="registro-card-preview">${entry.notes}</div>` : ''}
+      ${previewPhotos ? `<div class="registro-photos-preview">${previewPhotos}</div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('cal-main').innerHTML = html;
+}
+
+function openRegistroDetail(id) {
+  const entries = getRegistroEntries();
+  const entry = entries.find(e => e.id===id);
+  if (!entry) return;
+  currentRegistroId = id;
+  document.getElementById('reg-detail-title').textContent = entry.eventTitle||'Evento';
+
+  let html = '';
+  if (entry.notes) html += `<div class="reg-detail-section"><h4>📝 Note</h4><div class="reg-detail-notes">${entry.notes}</div></div>`;
+  if (entry.participants?.length) html += `<div class="reg-detail-section"><h4>👥 Partecipanti</h4><div style="display:flex;flex-wrap:wrap;gap:6px">${entry.participants.map(p=>`<span class="reg-participant-tag">${p}</span>`).join('')}</div></div>`;
+  if (entry.expenses?.length) {
+    const tot = entry.expenses.reduce((s,e)=>s+e.amount,0);
+    html += `<div class="reg-detail-section"><h4>💰 Spese · Totale €${tot.toFixed(2)}</h4>${entry.expenses.map(e=>`<div class="reg-expense-row"><span>${e.desc}</span><span>€${e.amount.toFixed(2)}</span></div>`).join('')}</div>`;
+  }
+  if (entry.photos?.length) html += `<div class="reg-detail-section"><h4>📸 Foto (${entry.photos.length})</h4><div style="display:flex;flex-wrap:wrap;gap:8px">${entry.photos.map(p=>`<img src="${p.data}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${p.data}','_blank')">`).join('')}</div></div>`;
+  if (entry.audios?.length) html += `<div class="reg-detail-section"><h4>🎤 Messaggi vocali</h4>${entry.audios.map(a=>`<div class="reg-audio-item"><span style="font-size:.7rem;color:var(--muted)">${a.ts}</span><audio controls src="${a.data}" style="flex:1;height:28px"></audio></div>`).join('')}</div>`;
+  if (entry.links?.length) html += `<div class="reg-detail-section"><h4>🔗 Link</h4>${entry.links.map(l=>`<div class="reg-link-item"><a href="${l}" target="_blank">${l}</a></div>`).join('')}</div>`;
+
+  document.getElementById('reg-detail-content').innerHTML = html || '<p style="color:var(--muted)">Nessun contenuto</p>';
+  document.getElementById('overlay-registro-detail').classList.add('open');
+}
+function closeRegistroDetail() { document.getElementById('overlay-registro-detail').classList.remove('open'); }
+
+function editRegistroEntry(id) {
+  const entries = getRegistroEntries();
+  const entry = entries.find(e => e.id===id);
+  if (!entry) return;
+  closeRegistroDetail();
+  currentRegistroEventId = entry.eventId;
+  currentRegistroId = id;
+  regState = {
+    notes: entry.notes||'', participants: [...(entry.participants||[])],
+    expenses: [...(entry.expenses||[])], photos: [...(entry.photos||[])],
+    audios: [...(entry.audios||[])], links: [...(entry.links||[])],
+    isPublic: entry.isPublic||false
+  };
+  document.getElementById('registro-modal-title').textContent = `📖 ${entry.eventTitle||'Evento'}`;
+  document.getElementById('registro-public').checked = entry.isPublic||false;
+  document.getElementById('reg-notes').value = entry.notes||'';
+  renderParticipants(); renderExpenses(); renderPhotos(); renderAudios(); renderLinks();
+  document.getElementById('overlay-registro').classList.add('open');
+}
+
+function deleteRegistroEntry(id) {
+  if (!confirm('Eliminare questo registro?')) return;
+  let entries = getRegistroEntries();
+  entries = entries.filter(e => e.id!==id);
+  saveRegistroEntries(entries);
+  if (window.fbDB && currentUser?.familyId) fbDB.ref(`registro/${currentUser.familyId}/${id}`).remove();
+  closeRegistroDetail();
+  renderRegistro();
+  showToast('🗑️ Registro eliminato');
+}
+
 // ══════════════════════════════════════════
 // Pulizia client ID salvato male
 const storedCid = localStorage.getItem('calsync_google_client_id');
