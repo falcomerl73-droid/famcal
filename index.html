@@ -1619,10 +1619,7 @@ function enterCalendar() {
     if (currentUser?.familyId) {
       DB.listenEvents(currentUser.familyId, () => render());
       // Carica e ascolta registro
-      loadRegistroFromFirebase().then(() => {
-        if (currentView === 'registro') renderRegistro();
-      });
-      listenRegistroUpdates();
+      // Registro caricato solo quando si apre la vista
     }
   });
   applyTheme();
@@ -2718,10 +2715,8 @@ async function loadRegistroFromFirebase() {
   if (!window.fbDB || !currentUser) return;
   try {
     const entries = [];
-    // Carica voci pubbliche della famiglia
     const pubSnap = await fbDB.ref(`registro/${currentUser.familyId}`).get();
     if (pubSnap.exists()) entries.push(...Object.values(pubSnap.val()));
-    // Carica voci private dell'utente
     const privSnap = await fbDB.ref(`registro_private/${currentUser.id}`).get();
     if (privSnap.exists()) {
       Object.values(privSnap.val()).forEach(e => {
@@ -2731,39 +2726,12 @@ async function loadRegistroFromFirebase() {
     if (entries.length) {
       localStorage.setItem('fc_registro', JSON.stringify(entries));
     }
-  } catch(e) { console.warn('Registro Firebase load error:', e); }
+  } catch(e) { console.warn('Registro load error:', e); }
 }
 
 function listenRegistroUpdates() {
-  if (!window.fbDB || !currentUser?.familyId) return;
-  // Ascolta aggiornamenti pubblici in tempo reale
-  fbDB.ref(`registro/${currentUser.familyId}`).on('value', snap => {
-    const existing = getRegistroEntries();
-    const publicEntries = snap.exists() ? Object.values(snap.val()) : [];
-    // Mantieni voci private, aggiorna pubbliche
-    const privateEntries = existing.filter(e => !e.isPublic && e.authorId === currentUser.id);
-    const merged = [...privateEntries];
-    publicEntries.forEach(e => {
-      const idx = merged.findIndex(x => x.id === e.id);
-      if (idx >= 0) merged[idx] = e; else merged.push(e);
-    });
-    localStorage.setItem('fc_registro', JSON.stringify(merged));
-    if (currentView === 'registro') renderRegistro();
-  });
-  // Ascolta anche voci private dell'utente
-  fbDB.ref(`registro_private/${currentUser.id}`).on('value', snap => {
-    const existing = getRegistroEntries();
-    const privateEntries = snap.exists() ? Object.values(snap.val()) : [];
-    // Mantieni pubbliche, aggiorna private
-    const publicEntries = existing.filter(e => e.isPublic);
-    const merged = [...publicEntries];
-    privateEntries.forEach(e => {
-      const idx = merged.findIndex(x => x.id === e.id);
-      if (idx >= 0) merged[idx] = e; else merged.push(e);
-    });
-    localStorage.setItem('fc_registro', JSON.stringify(merged));
-    if (currentView === 'registro') renderRegistro();
-  });
+  // Disabilitato - causava loop infinito su mobile
+  // Il registro viene caricato on-demand quando si apre la vista
 }
 
 function openRegistroForEvent(eventId, eventTitle, eventDate) {
