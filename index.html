@@ -1927,9 +1927,10 @@ function renderMonth() {
     dayEvs.slice(0, remainingSlots).forEach(ev => {
       const av = ev.authorAvatar ? `<span style="margin-right:2px">${ev.authorAvatar}</span>` : '';
       const recIcon = ev.recurrence||ev.isOccurrence ? '🔄 ' : '';
+      const occSuffix = ev.occNotes ? ` · ${ev.occNotes}` : '';
       html += `<div class="event-chip ${ev.calendar||'local'}"
         onclick="event.stopPropagation();openEditEvent('${ev.id}')"
-        title="${ev.title}">${av}${recIcon}${ev.start?ev.start+' ':''}${ev.title}</div>`;
+        title="${ev.title}">${av}${recIcon}${ev.start?ev.start+' ':''}${ev.title}${occSuffix}</div>`;
     });
 
     const extra = (dayEvs.length - remainingSlots) + Math.max(0, multiDayEvs.filter(ev => ds >= ev.date && ds <= ev.endDate).length - cellSlots.filter(Boolean).length);
@@ -2084,8 +2085,7 @@ function renderWeek() {
         grid += `<div class="wtl-event ${cal}" style="top:${topOff}px;height:${height}px;left:${l};width:${w}"
           onclick="event.stopPropagation();openEditEvent('${ev.id}')">
           <span class="wtl-ev-time">${ev.start}${ev.end?'–'+ev.end:''}</span>
-          <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</span>
-          ${ev.occNotes?`<span class="wtl-ev-notes" style="color:var(--accent)">📌 ${ev.occNotes}</span>`:''}
+          <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}${ev.occNotes?' · '+ev.occNotes:''}</span>
         </div>`;
       });
       grid += '</div>';
@@ -2166,8 +2166,8 @@ function renderDay() {
       grid += `<div class="wtl-event ${cal} day-ev" style="top:${topInCell}px;height:${height}px;left:${l};width:${w}"
         onclick="event.stopPropagation();openEditEvent('${ev.id}')">
         <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
-        <span class="wtl-ev-title">${ev.title}</span>
-        ${ev.occNotes?`<span class="wtl-ev-notes" style="color:var(--accent)">📌 ${ev.occNotes}</span>`:(ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:'')}
+        <span class="wtl-ev-title">${ev.title}${ev.occNotes?' · '+ev.occNotes:''}</span>
+        ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
       </div>`;
     });
     grid += '</div>';
