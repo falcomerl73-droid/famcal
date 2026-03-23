@@ -1838,7 +1838,7 @@ function renderAgenda() {
       const timeStr = ev.start ? `${ev.start}${ev.end?' – '+ev.end:''}` : isMulti ? `${ev.date} → ${ev.endDate}` : 'Tutto il giorno';
       const isOwner = !ev.authorId || ev.authorId === currentUser?.id;
       const isPast = ev._agendaDate < today();
-      html += `<div class="agenda-event ${cal}" onclick="openEditEvent('${ev.id}')">
+      html += `<div class="agenda-event ${cal}" onclick="openEditEvent('${ev.id}','${ev._agendaDate}')">
         <div class="agenda-event-time">${timeStr}</div>
         <div class="agenda-event-body">
           <div class="agenda-event-title">${av}${ev.title}${recIcon}${multiIcon}</div>
@@ -1940,7 +1940,7 @@ function renderMonth() {
       const posClass = isStart && isEnd ? 'solo' : isStart ? 'start' : isEnd ? 'end' : 'cont';
       const label = `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}`;
       html += `<div class="event-chip ${cal} multiday ${posClass}"
-        onclick="event.stopPropagation();openEditEvent('${ev.id}')"
+        onclick="event.stopPropagation();openEditEvent('${ev.id}','${ev.date}')"
         title="${ev.title}">${label}</div>`;
     });
 
@@ -1953,7 +1953,7 @@ function renderMonth() {
       const recIcon = ev.recurrence||ev.isOccurrence ? '🔄 ' : '';
       const occSuffix = ev.occNotes ? ` · ${ev.occNotes}` : '';
       html += `<div class="event-chip ${ev.calendar||'local'}"
-        onclick="event.stopPropagation();openEditEvent('${ev.id}')"
+        onclick="event.stopPropagation();openEditEvent('${ev.id}','${ev.date}')"
         title="${ev.title}">${av}${recIcon}${ev.start?ev.start+' ':''}${ev.title}${occSuffix}</div>`;
     });
 
@@ -1970,45 +1970,59 @@ function renderMonth() {
 // ── OVERLAP LAYOUT ──
 // Calcola colonne per eventi sovrapposti (come Google Calendar)
 function computeEventLayout(evs, HOUR_H) {
-  // Converti orari in minuti
+  if (!evs.length) return [];
+
   const items = evs.map(ev => {
     const [sh,sm] = (ev.start||'00:00').split(':').map(Number);
     const [eh,em] = (ev.end||`${sh+1}:00`).split(':').map(Number);
     const startMin = sh*60+sm;
     const endMin   = Math.max(eh*60+em, startMin+30);
     return { ev, startMin, endMin,
-      top: (startMin/60)*HOUR_H,
+      top:    (startMin/60)*HOUR_H,
       height: Math.max(((endMin-startMin)/60)*HOUR_H, 22),
       col: 0, totalCols: 1
     };
   });
 
-  // Algoritmo sweep line per rilevare sovrapposizioni
-  // Assegna colonne agli eventi
-  const cols = []; // cols[i] = endMin dell'ultimo evento nella colonna i
+  // Raggruppa eventi che si sovrappongono (cluster)
+  items.sort((a,b) => a.startMin - b.startMin);
+  const clusters = [];
   items.forEach(item => {
+    // Trova cluster con cui si sovrappone
     let placed = false;
-    for (let c = 0; c < cols.length; c++) {
-      if (cols[c] <= item.startMin) {
-        item.col = c;
-        cols[c] = item.endMin;
+    for (const cluster of clusters) {
+      const maxEnd = Math.max(...cluster.map(i => i.endMin));
+      if (item.startMin < maxEnd) {
+        cluster.push(item);
         placed = true;
         break;
       }
     }
-    if (!placed) {
-      item.col = cols.length;
-      cols.push(item.endMin);
-    }
+    if (!placed) clusters.push([item]);
   });
 
-  // Calcola totalCols per ogni gruppo sovrapposto
-  items.forEach(item => {
-    // Trova tutti gli eventi che si sovrappongono con questo
-    const overlapping = items.filter(other =>
-      other.startMin < item.endMin && other.endMin > item.startMin
-    );
-    item.totalCols = Math.max(...overlapping.map(o => o.col)) + 1;
+  // Per ogni cluster assegna colonne
+  clusters.forEach(cluster => {
+    const cols = []; // ogni colonna contiene l'endMin massimo
+    cluster.forEach(item => {
+      // Trova prima colonna libera
+      let placed = false;
+      for (let c = 0; c < cols.length; c++) {
+        if (cols[c] <= item.startMin) {
+          item.col = c;
+          cols[c] = item.endMin;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        item.col = cols.length;
+        cols.push(item.endMin);
+      }
+    });
+    const numCols = cols.length;
+    // Tutti gli eventi nel cluster usano lo stesso totalCols
+    cluster.forEach(item => { item.totalCols = numCols; });
   });
 
   return items;
@@ -2078,7 +2092,7 @@ function renderWeek() {
         const posClass = isStart && isEnd ? 'solo' : isStart ? 'start' : isEnd ? 'end' : 'cont';
         const label = `${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}`;
         grid += `<div class="event-chip ${cal} multiday ${posClass}"
-          onclick="event.stopPropagation();openEditEvent('${ev.id}')"
+          onclick="event.stopPropagation();openEditEvent('${ev.id}','${ev.date}')"
           title="${ev.title}">${label}</div>`;
       });
       grid += '</div>';
@@ -2107,7 +2121,7 @@ function renderWeek() {
         const w = totalCols > 1 ? `calc(${100/totalCols}% - 3px)` : 'calc(100% - 4px)';
         const l = totalCols > 1 ? `calc(${(col/totalCols)*100}% + 2px)` : '2px';
         grid += `<div class="wtl-event ${cal}" style="top:${topOff}px;height:${height}px;left:${l};width:${w}"
-          onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+          onclick="event.stopPropagation();openEditEvent('${ev.id}','${ev.date}')">
           <span class="wtl-ev-time">${ev.start}${ev.end?'–'+ev.end:''}</span>
           <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}${ev.occNotes?' · '+ev.occNotes:''}</span>
         </div>`;
@@ -2167,7 +2181,7 @@ function renderDay() {
     fixedTop += '<div class="day-allday-banner">';
     multiEvs.forEach(ev => {
       const cal = ev.calendar||'local';
-      fixedTop += `<div class="event-chip ${cal} multiday solo" onclick="openEditEvent('${ev.id}')" title="${ev.title}">
+      fixedTop += `<div class="event-chip ${cal} multiday solo" onclick="openEditEvent('${ev.id}','${ev.date}')" title="${ev.title}">
         ${ev.authorAvatar?ev.authorAvatar+' ':''}📅 ${ev.title}
         <span style="opacity:.7;font-size:.9em"> · ${ev.date} → ${ev.endDate}</span>
       </div>`;
@@ -2188,7 +2202,7 @@ function renderDay() {
       const l = `calc(${(col/totalCols)*100}% + 2px)`;
       const topInCell = top - h*HOUR_H;
       grid += `<div class="wtl-event ${cal} day-ev" style="top:${topInCell}px;height:${height}px;left:${l};width:${w}"
-        onclick="event.stopPropagation();openEditEvent('${ev.id}')">
+        onclick="event.stopPropagation();openEditEvent('${ev.id}','${ev.date}')">
         <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
         <span class="wtl-ev-title">${ev.title}${ev.occNotes?' · '+ev.occNotes:''}</span>
         ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
@@ -2246,7 +2260,7 @@ function openNewEventOnDate(ds, st='') {
   document.getElementById('ev-date').value = ds;
   if (st) document.getElementById('ev-start').value = st;
 }
-function openEditEvent(id) {
+function openEditEvent(id, occDate) {
   // Per le occorrenze ricorrenti (_occ_N), trova il master
   const masterId = id.replace(/_occ_\d+$/, '');
   const isOccurrence = masterId !== id;
@@ -2292,7 +2306,9 @@ function openEditEvent(id) {
   const occNotesEl  = document.getElementById('ev-occ-notes');
   // Mostra note occorrenza per TUTTE le date di un evento ricorrente (anche la prima)
   if (isOccurrence || ev.recurrence) {
-    const occKey = `occ_notes_${masterId}_${ev.date}`;
+    // Usa occDate se passata (data specifica cliccata), altrimenti ev.date
+    const theDate = occDate || ev.date;
+    const occKey = `occ_notes_${masterId}_${theDate}`;
     occNotesEl.value = localStorage.getItem(occKey) || '';
     occNotesEl.dataset.occkey = occKey;
     occNotesEl.disabled = isReadOnly;
