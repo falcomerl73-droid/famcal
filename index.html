@@ -1186,6 +1186,10 @@
       <label>Ripeti fino al</label>
       <input type="date" id="ev-recurrence-end" placeholder="Data fine ripetizione">
     </div>
+    <div class="form-row" id="occ-notes-row" style="display:none">
+      <label style="color:var(--accent)">📌 Note per questa data <span style="font-weight:400;text-transform:none;color:var(--muted)">(solo per questa occorrenza)</span></label>
+      <textarea id="ev-occ-notes" placeholder="Note specifiche per questa data…" style="border-color:rgba(124,106,247,.5)"></textarea>
+    </div>
     <div class="modal-actions">
       <button class="btn danger" id="btn-delete-event" onclick="deleteEvent()" style="display:none">Elimina</button>
       <button class="btn" onclick="closeEvent()">Annulla</button>
@@ -1194,8 +1198,6 @@
     <div id="ev-author-info" style="display:none;font-size:.72rem;color:var(--muted);margin-top:10px;text-align:center"></div>
   </div>
 </div>
-
-<!-- FAMILY MODAL -->
 <div class="overlay" id="overlay-family">
   <div class="modal" style="width:480px">
     <h3>👨‍👩‍👧 La tua Famiglia</h3>
@@ -1816,7 +1818,7 @@ function renderAgenda() {
         <div class="agenda-event-time">${timeStr}</div>
         <div class="agenda-event-body">
           <div class="agenda-event-title">${av}${ev.title}${recIcon}${multiIcon}</div>
-          ${ev.notes ? `<div class="agenda-event-notes">${ev.notes}</div>` : ''}
+          ${ev.occNotes ? `<div class="agenda-event-notes" style="color:var(--accent)">📌 ${ev.occNotes}</div>` : (ev.notes ? `<div class="agenda-event-notes">${ev.notes}</div>` : '')}
           ${ev.authorName && !isOwner ? `<div class="agenda-event-author">📌 ${ev.authorName}</div>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
@@ -2083,6 +2085,7 @@ function renderWeek() {
           onclick="event.stopPropagation();openEditEvent('${ev.id}')">
           <span class="wtl-ev-time">${ev.start}${ev.end?'–'+ev.end:''}</span>
           <span class="wtl-ev-title">${ev.authorAvatar?ev.authorAvatar+' ':''}${ev.title}</span>
+          ${ev.occNotes?`<span class="wtl-ev-notes" style="color:var(--accent)">📌 ${ev.occNotes}</span>`:''}
         </div>`;
       });
       grid += '</div>';
@@ -2164,7 +2167,7 @@ function renderDay() {
         onclick="event.stopPropagation();openEditEvent('${ev.id}')">
         <span class="wtl-ev-time">${ev.start}${ev.end?' – '+ev.end:''}</span>
         <span class="wtl-ev-title">${ev.title}</span>
-        ${ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:''}
+        ${ev.occNotes?`<span class="wtl-ev-notes" style="color:var(--accent)">📌 ${ev.occNotes}</span>`:(ev.notes?`<span class="wtl-ev-notes">${ev.notes}</span>`:'')}
       </div>`;
     });
     grid += '</div>';
@@ -2260,16 +2263,35 @@ function openEditEvent(id) {
     if (el) { el.disabled = isReadOnly; el.style.opacity = isReadOnly ? '.5' : '1'; }
   });
 
+  // Note per occorrenza specifica
+  const occNotesRow = document.getElementById('occ-notes-row');
+  const occNotesEl  = document.getElementById('ev-occ-notes');
+  if (isOccurrence) {
+    const occNum = id.match(/_occ_(\d+)$/)?.[1] || '';
+    const occKey = `occ_notes_${masterId}_${occNum}`;
+    occNotesEl.value = localStorage.getItem(occKey) || '';
+    occNotesEl.dataset.occkey = occKey;
+    occNotesEl.disabled = isReadOnly;
+    occNotesEl.style.opacity = isReadOnly ? '.5' : '1';
+    occNotesRow.style.display = 'flex';
+  } else {
+    occNotesRow.style.display = 'none';
+    occNotesEl.value = '';
+    occNotesEl.dataset.occkey = '';
+  }
+
   document.getElementById('btn-delete-event').style.display = isReadOnly ? 'none' : 'block';
   document.querySelector('#overlay-event .btn.primary').style.display = isReadOnly ? 'none' : 'block';
   document.getElementById('overlay-event').classList.add('open');
 }
 function closeEvent() {
-  // Riabilita campi per la prossima apertura
   ['ev-title','ev-date','ev-start','ev-end','ev-notes','ev-recurrence','ev-recurrence-end'].forEach(f => {
     const el = document.getElementById(f);
     if (el) { el.disabled = false; el.style.opacity = '1'; }
   });
+  document.getElementById('occ-notes-row').style.display = 'none';
+  document.getElementById('ev-occ-notes').value = '';
+  document.getElementById('ev-occ-notes').dataset.occkey = '';
   document.querySelector('#overlay-event .btn.primary').style.display = 'block';
   document.getElementById('overlay-event').classList.remove('open');
 }
@@ -2299,6 +2321,14 @@ function saveEvent() {
   };
   if (!ev.date) { showToast('⚠️ Inserisci una data'); return; }
   if (recurrence && !recurrenceEnd) { showToast('⚠️ Inserisci la data di fine ripetizione'); return; }
+
+  // Salva note occorrenza se presente
+  const occKey = document.getElementById('ev-occ-notes').dataset.occkey;
+  const occNotes = document.getElementById('ev-occ-notes').value.trim();
+  if (occKey) {
+    if (occNotes) localStorage.setItem(occKey, occNotes);
+    else localStorage.removeItem(occKey);
+  }
   if (id) events = events.map(e => e.id===id ? ev : e);
   else    events.push(ev);
   saveLocal();
@@ -2335,7 +2365,8 @@ function expandRecurringEvents(baseEvents, dateStr) {
       else if (ev.recurrence === 'yearly')  cur.setFullYear(cur.getFullYear()+1);
       count++;
       if (fmt(cur) === dateStr) {
-        result.push({ ...ev, id: `${ev.id}_occ_${count}`, date: dateStr, isOccurrence: true });
+        result.push({ ...ev, id: `${ev.id}_occ_${count}`, date: dateStr, isOccurrence: true,
+          occNotes: localStorage.getItem(`occ_notes_${ev.id}_${dateStr}`) || '' });
         break;
       }
     }
