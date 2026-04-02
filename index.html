@@ -11,7 +11,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FamCal">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebase.com https://firebase.googleapis.com https://www.gstatic.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src blob:; connect-src https:;">
   <meta name="theme-color" content="#0e0f13">
 <meta name="description" content="Il calendario condiviso della tua famiglia">
 
@@ -1099,25 +1098,15 @@
   <div class="modal" style="width:460px">
     <h3 id="connect-title">Connetti Calendario</h3>
     <div id="google-connect-ui" style="display:none">
-      <p class="connect-info">
-        1. Vai su <b>console.cloud.google.com</b> → crea progetto → abilita <b>Google Calendar API</b><br>
-        2. Credenziali → OAuth 2.0 → aggiungi <code>http://localhost</code> come redirect URI<br>
-        3. Incolla il <b>Client ID</b> qui sotto
+      <p class="connect-info" style="text-align:center;padding:10px 0">
+        Clicca il pulsante per autorizzare FamCal ad accedere al tuo Google Calendar.
       </p>
-      <div class="form-row">
-        <label>Google Client ID</label>
-        <div class="field-row">
-          <input type="text" id="google-client-id" placeholder="xxxxxxxx.apps.googleusercontent.com" style="display:none">
-          <span style="font-size:.78rem;color:var(--muted);flex:1">Client ID configurato ✅</span>
-          <button class="btn primary" onclick="connectGoogle()">Connetti</button>
-        </div>
-      </div>
-      <div class="form-row" style="margin-top:8px">
-        <label>Oppure API Key (sola lettura)</label>
-        <div class="field-row">
-          <input type="text" id="google-api-key" placeholder="AIzaSy...">
-          <button class="btn" onclick="connectGoogleReadOnly()">Importa</button>
-        </div>
+      <input type="text" id="google-client-id" style="display:none">
+      <input type="text" id="google-api-key" style="display:none">
+      <div style="text-align:center;margin-top:8px">
+        <button class="btn primary" style="width:100%;padding:12px" onclick="connectGoogle()">
+          🔵 Accedi con Google
+        </button>
       </div>
     </div>
     <div id="outlook-connect-ui" style="display:none">
