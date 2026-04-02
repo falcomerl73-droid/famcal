@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FamCal">
-<meta name="theme-color" content="#0e0f13">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebase.com https://firebase.googleapis.com https://www.gstatic.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src blob:; connect-src https:;">
+  <meta name="theme-color" content="#0e0f13">
 <meta name="description" content="Il calendario condiviso della tua famiglia">
 
 <!-- Icona per schermata home Android/iOS -->
@@ -761,9 +762,7 @@
   background: var(--rust, #c4622d);
 }
 .day-view { display: grid; grid-template-columns: 52px 1fr; gap: 1px; background: var(--border); border-radius: 10px; overflow: hidden; }
-.day-slot { background: var(--surface); height: 52px; border-top: 1px solid var(--border); position: relative; cursor: pointer; }
 .day-slot:hover { background: var(--surface2); }
-.day-event { position: absolute; left: 4px; right: 4px; font-size: .73rem; font-weight: 500; padding: 3px 7px; border-radius: 5px; overflow: hidden; z-index: 2; cursor: pointer; }
 .day-event.google  { background: rgba(79,195,247,.2);  color: var(--google);  border-left: 3px solid var(--google); }
 .day-event.outlook { background: rgba(249,123,107,.2); color: var(--outlook); border-left: 3px solid var(--outlook); }
 .day-event.local   { background: rgba(91,229,160,.2);  color: var(--success); border-left: 3px solid var(--success); }
@@ -1108,7 +1107,8 @@
       <div class="form-row">
         <label>Google Client ID</label>
         <div class="field-row">
-          <input type="text" id="google-client-id" placeholder="xxxxxxxx.apps.googleusercontent.com">
+          <input type="text" id="google-client-id" placeholder="xxxxxxxx.apps.googleusercontent.com" style="display:none">
+          <span style="font-size:.78rem;color:var(--muted);flex:1">Client ID configurato ✅</span>
           <button class="btn primary" onclick="connectGoogle()">Connetti</button>
         </div>
       </div>
@@ -1598,6 +1598,7 @@ function getEventsForDay(ds) {
 
 // ── Init calendar page ──
 function enterCalendar() {
+  if (!currentUser) { showPage('login'); return; }
   events = DB.events();
   showPage('calendar');
   initUserUI();
@@ -1847,7 +1848,7 @@ function renderAgenda() {
       html += `<div class="agenda-event ${cal}" onclick="openEditEvent('${ev.id}','${ev._agendaDate}')">
         <div class="agenda-event-time">${timeStr}</div>
         <div class="agenda-event-body">
-          <div class="agenda-event-title">${av}${ev.title}${recIcon}${multiIcon}</div>
+          <div class="agenda-event-title">${av}${sanitize(ev.title)}${recIcon}${multiIcon}</div>
           ${ev.occNotes ? `<div class="agenda-event-notes" style="color:var(--accent)">📌 ${ev.occNotes}</div>` : (ev.notes ? `<div class="agenda-event-notes">${ev.notes}</div>` : '')}
           ${ev.authorName && !isOwner ? `<div class="agenda-event-author">📌 ${ev.authorName}</div>` : ''}
         </div>
@@ -1960,7 +1961,7 @@ function renderMonth() {
       const occSuffix = ev.occNotes ? ` · ${ev.occNotes}` : '';
       html += `<div class="event-chip ${ev.calendar||'local'}"
         onclick="event.stopPropagation();openEditEvent('${ev.id}','${ev.date}')"
-        title="${ev.title}">${av}${recIcon}${ev.start?ev.start+' ':''}${ev.title}${occSuffix}</div>`;
+        title="${ev.title}">${av}${recIcon}${ev.start?ev.start+' ':''}${sanitize(ev.title)}${sanitize(occSuffix)}</div>`;
     });
 
     const extra = (dayEvs.length - remainingSlots) + Math.max(0, multiDayEvs.filter(ev => ds >= ev.date && ds <= ev.endDate).length - cellSlots.filter(Boolean).length);
@@ -2240,6 +2241,8 @@ function renderDay() {
 // ══════════════════════════════════════════
 //  EVENT MODAL
 // ══════════════════════════════════════════
+function sanitize(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 function toggleRecurrenceEnd() {
   const rec = document.getElementById('ev-recurrence').value;
   document.getElementById('recurrence-end-row').style.display = rec ? 'flex' : 'none';
@@ -2494,10 +2497,8 @@ function updatePills() {
 //  GOOGLE CALENDAR
 // ══════════════════════════════════════════
 function connectGoogle() {
-  let cid = document.getElementById('google-client-id').value.trim();
-  cid = cid.replace(/^https?:\/\//i, '');
-  if (!cid) cid = GOOGLE_CLIENT_ID; // usa quello fisso se vuoto
-  cid = cid || GOOGLE_CLIENT_ID;
+  // Usa SEMPRE il Client ID fisso — pulisce eventuali valori sbagliati
+  const cid = GOOGLE_CLIENT_ID;
   localStorage.setItem('calsync_google_client_id', cid);
   localStorage.setItem('calsync_last_flow','google');
   const scopes = encodeURIComponent('https://www.googleapis.com/auth/calendar');
@@ -2537,7 +2538,7 @@ async function fetchGoogleEventsWithKey(key) {
         const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?key=${key}&timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=250`;
         const data = await (await fetch(url)).json();
         if (data.items) { importGoogleEvents(data.items); totalImported += data.items.length; }
-      } catch(e) { console.warn('Skip cal:', cal.id); }
+      } catch(e) {  }
     }
     googleConnected = true; updatePills();
     if (totalImported > 0) render();
@@ -2640,16 +2641,6 @@ function importOutlookEvents(items) {
   });
   saveLocal();
 }
-async function syncEventToOutlook(ev, isUpdate) {
-  if (!outlookToken) return;
-  const body = {subject:ev.title, body:{contentType:'text',content:ev.notes||''},
-    start:{dateTime:`${ev.date}T${ev.start||'09:00'}:00`,timeZone:'Europe/Rome'},
-    end:  {dateTime:`${ev.date}T${ev.end||'10:00'}:00`,  timeZone:'Europe/Rome'}};
-  const method = isUpdate && ev.remoteId ? 'PATCH' : 'POST';
-  const url = ev.remoteId ? `https://graph.microsoft.com/v1.0/me/events/${ev.remoteId}` : 'https://graph.microsoft.com/v1.0/me/events';
-  const data = await (await fetch(url,{method,headers:{'Authorization':'Bearer '+outlookToken,'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  if (data.id) { ev.remoteId=data.id; saveLocal(); }
-}
 async function deleteOutlookEvent(ev) {
   if (!outlookToken||!ev.remoteId) return;
   await fetch(`https://graph.microsoft.com/v1.0/me/events/${ev.remoteId}`,{method:'DELETE',headers:{'Authorization':'Bearer '+outlookToken}});
@@ -2729,10 +2720,6 @@ async function loadRegistroFromFirebase() {
   } catch(e) { console.warn('Registro load error:', e); }
 }
 
-function listenRegistroUpdates() {
-  // Disabilitato - causava loop infinito su mobile
-  // Il registro viene caricato on-demand quando si apre la vista
-}
 
 function openRegistroForEvent(eventId, eventTitle, eventDate) {
   currentRegistroEventId = eventId;
@@ -3019,8 +3006,8 @@ function deleteRegistroEntry(id) {
 
 // ══════════════════════════════════════════
 // Pulizia client ID salvato male
-const storedCid = localStorage.getItem('calsync_google_client_id');
-if (storedCid) localStorage.setItem('calsync_google_client_id', storedCid.replace(/^https?:\/\//i, ''));
+// Forza sempre il Client ID corretto, ignora valori salvati sbagliati
+localStorage.setItem('calsync_google_client_id', GOOGLE_CLIENT_ID);
 
 buildAvatarRow();
 
